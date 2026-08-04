@@ -1,0 +1,19 @@
+# Dependencies (vendor libs are committed on purpose; node_modules is not)
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# Secrets / keys — never commit these
+*.pem
+*.key
+.env
+.env.*
+deploy_key*
+id_rsa*
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="no-referrer" />
+  <title>แดชบอร์ดการขออนุมัติสิทธิ์ โปรแกรม Code Monkey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark">CM</div>
+        <div>
+          <h1>แดชบอร์ดการขออนุมัติสิทธิ์</h1>
+          <p class="subtitle">โปรแกรม Code Monkey — สรุปคำขอจากสถานศึกษา</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span id="lastUpdated" class="last-updated">กำลังโหลด…</span>
+        <button id="refreshBtn" class="btn" type="button" title="ดึงข้อมูลล่าสุด">↻ รีเฟรช</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="statusBanner" class="banner" hidden></section>
+
+    <!-- KPI cards -->
+    <section class="kpi-grid" aria-label="สรุปภาพรวม">
+      <div class="kpi-card">
+        <div class="kpi-label">จำนวนสถานศึกษาที่ยื่นคำขอ</div>
+        <div class="kpi-value" id="kpiSchools">—</div>
+        <div class="kpi-foot">แถวข้อมูลทั้งหมด</div>
+      </div>
+      <div class="kpi-card accent">
+        <div class="kpi-label">รวมจำนวนที่ขออนุมัติสิทธิ</div>
+        <div class="kpi-value" id="kpiSeats">—</div>
+        <div class="kpi-foot">ผลรวมสิทธิที่ร้องขอ</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">จำนวนจังหวัด</div>
+        <div class="kpi-value" id="kpiProvinces">—</div>
+        <div class="kpi-foot">ครอบคลุมพื้นที่</div>
+      </div>
+      <div class="kpi-card warn">
+        <div class="kpi-label">อยู่ระหว่างพิจารณา</div>
+        <div class="kpi-value" id="kpiPending">—</div>
+        <div class="kpi-foot">สถานะการอนุมัติ</div>
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="chart-grid">
+      <div class="panel">
+        <h2>จำนวนที่ขออนุมัติสิทธิ ตามจังหวัด (สูงสุด 10)</h2>
+        <div class="chart-wrap"><canvas id="chartProvince"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2>สัดส่วนตามสังกัด</h2>
+        <div class="chart-wrap"><canvas id="chartAffiliation"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2>ระดับชั้นที่เข้าร่วมโครงการ</h2>
+        <div class="chart-wrap"><canvas id="chartGrade"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2>สถานะการอนุมัติ</h2>
+        <div class="chart-wrap"><canvas id="chartStatus"></canvas></div>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section class="panel table-panel">
+      <div class="table-toolbar">
+        <h2>รายละเอียดคำขอรายสถานศึกษา</h2>
+        <div class="table-controls">
+          <input id="searchBox" class="input" type="search" placeholder="ค้นหา (ชื่อโรงเรียน / จังหวัด / อำเภอ)…" />
+          <select id="provinceFilter" class="input">
+            <option value="">ทุกจังหวัด</option>
+          </select>
+          <button id="exportBtn" class="btn ghost" type="button">⬇ ส่งออก CSV</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table id="dataTable">
+          <thead><tr id="tableHead"></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="table-foot">
+        <span id="rowCount">—</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="sitefoot">
+    <span>ข้อมูลสด (Live) จาก Google Sheets · แสดงเฉพาะคอลัมน์ที่ไม่ใช่ข้อมูลส่วนบุคคล</span>
+  </footer>
+
+  <!-- Self-hosted vendor libraries (no third-party runtime dependency) -->
+  <script src="vendor/papaparse.min.js"></script>
+  <script src="vendor/chart.umd.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
