@@ -12,7 +12,7 @@
  */
 window.DASHBOARD_CONFIG = {
   // Filled automatically once the Dashboard tab is published to the web.
-  DATA_CSV_URL: "__PUBLISHED_CSV_URL__",
+  DATA_CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_BklZN_FFO7v8QiqOxnKh_A-czkiOJTuO7G2O_wIjppZM9-BEo0SLhAQfUZ_JNM1SuJAkwZQMABd3/pub?gid=1610159694&single=true&output=csv",
 
   // Fallback CSV bundled with the app (used only if the live URL is unset/unreachable).
   FALLBACK_CSV_URL: "assets/data/sample.csv",
