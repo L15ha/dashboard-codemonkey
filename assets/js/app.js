@@ -42,7 +42,11 @@
     $("lastUpdated").textContent = "กำลังโหลด…";
     var url = CFG.DATA_CSV_URL;
     var usingLive = url && url.indexOf("__") !== 0;
-    var target = usingLive ? url : CFG.FALLBACK_CSV_URL;
+    // Cache-bust the live feed so the browser always fetches Google's latest
+    // published snapshot rather than a cached copy.
+    var target = usingLive
+      ? url + (url.indexOf("?") > -1 ? "&" : "?") + "_=" + Date.now()
+      : CFG.FALLBACK_CSV_URL;
 
     Papa.parse(target, {
       download: true,
