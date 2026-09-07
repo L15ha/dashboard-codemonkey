@@ -24,8 +24,6 @@
       schools[(r.school || "").trim()] = true;
     });
     $("kpiWinners").textContent = ALL.length.toLocaleString("th-TH");
-    $("kpiSeats").textContent = seats.toLocaleString("th-TH");
-    $("kpiSplit").textContent = "ครู " + teacher.toLocaleString("th-TH") + " · นักเรียน " + student.toLocaleString("th-TH");
     $("kpiSchools").textContent = Object.keys(schools).filter(Boolean).length.toLocaleString("th-TH");
     $("kpiProvinces").textContent = Object.keys(provs).filter(Boolean).length.toLocaleString("th-TH");
   }

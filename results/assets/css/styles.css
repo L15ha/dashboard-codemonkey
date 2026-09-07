@@ -31,7 +31,7 @@ body { font-family: 'Noto Sans Thai', system-ui, sans-serif; background: var(--b
 
 .container { max-width: 1240px; margin: 0 auto; padding: 24px; }
 
-.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
 .kpi-card { background: var(--panel); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); border-left: 4px solid var(--line); }
 .kpi-card.accent { border-left-color: var(--brand); }
 .kpi-card.ok { border-left-color: var(--ok); }
