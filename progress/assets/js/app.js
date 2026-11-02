@@ -1,4 +1,5 @@
-/* Code Monkey — course progress dashboard. Anonymised LMS snapshot from data/progress.json. */
+/* Code Monkey — course progress dashboard. LMS snapshot from data/progress.json:
+   learners = [[last_activity "YYYY-MM-DD HH:MM", avg_watch_percent, name], ...] */
 (function () {
   "use strict";
 
@@ -8,12 +9,17 @@
 
   var snap = null;
   var charts = {};
-  var state = { from: "" };
+  var state = { from: "", q: "", status: "", sort: "pct-desc", shown: [] };
 
   function $(id) { return document.getElementById(id); }
   function num(n) { return n.toLocaleString("th-TH"); }
   function pct(n) { return (Math.round(n * 10) / 10).toLocaleString("th-TH") + "%"; }
-  function parseDay(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function parseDay(s) { var p = s.slice(0, 10).split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function esc(s) { return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function when(s) {
+    return parseDay(s).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" }) +
+      (s.length > 10 ? " " + s.slice(11, 16) + " น." : "");
+  }
 
   /* ---------- data ---------- */
   function load() {
@@ -102,10 +108,64 @@
     });
   }
 
+  /* ---------- table ---------- */
+  function highlight(text, q) {
+    text = String(text == null ? "" : text);
+    if (!q) return esc(text);
+    var i = text.toLowerCase().indexOf(q);
+    if (i === -1) return esc(text);
+    return esc(text.slice(0, i)) + "<mark>" + esc(text.slice(i, i + q.length)) + "</mark>" + esc(text.slice(i + q.length));
+  }
+  var SORTS = {
+    "pct-desc": function (a, b) { return b[1] - a[1] || (b[0] < a[0] ? -1 : b[0] > a[0] ? 1 : 0); },
+    "pct-asc": function (a, b) { return a[1] - b[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0); },
+    "recent": function (a, b) { return b[0] < a[0] ? -1 : b[0] > a[0] ? 1 : 0; },
+    "name": function (a, b) { return (a[2] || "").localeCompare(b[2] || "", "th"); }
+  };
+  function renderTable(list) {
+    var q = state.q, status = state.status;
+    var shown = list.filter(function (l) {
+      if (status === "done" && l[1] < 100) return false;
+      if (status === "ongoing" && l[1] >= 100) return false;
+      return !q || (l[2] || "").toLowerCase().indexOf(q) !== -1;
+    }).sort(SORTS[state.sort]);
+    state.shown = shown;
+    var html = shown.map(function (l, i) {
+      var p = Math.min(l[1], 100), done = l[1] >= 100;
+      return "<tr>" +
+        '<td class="idx">' + (i + 1) + "</td>" +
+        '<td class="name">' + highlight(l[2] || "—", q) + "</td>" +
+        '<td><div class="progress-cell"><div class="bar' + (done ? " done" : "") + '"><span style="width:' + p + '%"></span></div>' +
+          '<span class="progress-num">' + p + "%</span></div></td>" +
+        "<td>" + (done ? '<span class="pill full">เรียนจบแล้ว</span>' : '<span class="pill ongoing">กำลังเรียน</span>') + "</td>" +
+        '<td class="when">' + esc(when(l[0])) + "</td>" +
+      "</tr>";
+    }).join("");
+    $("tableBody").innerHTML = html || '<tr><td class="empty" colspan="5">ไม่พบรายชื่อที่ตรงกับการค้นหา</td></tr>';
+    $("rowCount").textContent = "แสดง " + num(shown.length) + " จาก " + num(list.length) + " รายชื่อ";
+  }
+
+  /* ---------- export ---------- */
+  function exportCSV() {
+    var head = ["ลำดับ", "ชื่อ - นามสกุล", "ความคืบหน้า (%)", "สถานะ", "เข้าเรียนล่าสุด"];
+    var lines = [head].concat(state.shown.map(function (l, i) {
+      return [i + 1, l[2], Math.min(l[1], 100), l[1] >= 100 ? "เรียนจบแล้ว" : "กำลังเรียน", l[0]];
+    }));
+    var csv = lines.map(function (row) {
+      return row.map(function (c) { return '"' + String(c == null ? "" : c).replace(/"/g, '""') + '"'; }).join(",");
+    }).join("\r\n");
+    var blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "code-monkey-progress.csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
   function render() {
     var list = rows();
     renderKPIs(list);
     renderCharts(list);
+    renderTable(list);
   }
 
   /* ---------- init ---------- */
@@ -116,6 +176,10 @@
     state.from = btn.getAttribute("data-from");
     render();
   });
+  $("searchBox").addEventListener("input", function (e) { state.q = (e.target.value || "").trim().toLowerCase(); renderTable(rows()); });
+  $("statusFilter").addEventListener("change", function (e) { state.status = e.target.value; renderTable(rows()); });
+  $("sortBy").addEventListener("change", function (e) { state.sort = e.target.value; renderTable(rows()); });
+  $("exportBtn").addEventListener("click", exportCSV);
 
   load().then(function (data) {
     snap = data;

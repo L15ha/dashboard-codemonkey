@@ -2,8 +2,8 @@
 
 เว็บ static (HTML/CSS/JS) มี 2 หน้า สลับกันได้จากแถบเมนูด้านบน:
 
-- **ประกาศผลผู้ได้รับสิทธิ์** (`/results/`) — หน้าแรก (`/` จะพาไปหน้านี้) ข้อมูลรายชื่อฝังในไฟล์ `results/assets/js/data.js`
-- **ความคืบหน้าการเรียน** (`/progress/`) — สถิติการเรียนจาก LMS API (ไม่มีชื่อผู้เรียน) ดูข้อ 5
+- **ความคืบหน้าการเรียน** (`/progress/`) — หน้าแรก (`/` จะพาไปหน้านี้) สถิติ + รายชื่อผู้เรียนและ % ความคืบหน้า จาก LMS API ดูข้อ 5
+- **ประกาศผลผู้ได้รับสิทธิ์** (`/results/`) — ข้อมูลรายชื่อฝังในไฟล์ `results/assets/js/data.js`
 
 ---
 
@@ -11,7 +11,7 @@
 
 ```
 Dashboard Codemonkey/
-├─ index.html                 หน้าแรก → พาไป results/
+├─ index.html                 หน้าแรก → พาไป progress/
 ├─ results/                   หน้าประกาศผล (index.html, assets/, vendor/)
 ├─ progress/                  หน้าความคืบหน้าการเรียน
 │  ├─ assets/js/app.js
@@ -112,13 +112,14 @@ cd codemonkey-dashboard && git pull && bash deploy/deploy.sh
 
 ## 5) หน้าความคืบหน้าการเรียน (`/progress/`) — ข้อมูลจาก LMS API
 
-หน้า `/progress/` แสดงสถิติการเรียนคอร์ส Code Monkey จาก **LMS Course Status API**
+หน้า `/progress/` แสดงสถิติการเรียนคอร์ส Code Monkey และ **รายชื่อผู้เรียนพร้อม % ความคืบหน้า** (ค้นหา/กรอง/เรียง/ส่งออก CSV) จาก **LMS Course Status API**
 (ผู้เรียนทั้งหมด / เรียนจบ / ความคืบหน้าเฉลี่ย / ไม่ได้เข้าเรียนเกิน 30 วัน / กราฟรายเดือน)
 
-API ต้องใช้ API key และส่งชื่อผู้เรียนกลับมา จึง **ไม่เรียกจากเบราว์เซอร์** แต่ให้เซิร์ฟเวอร์ดึงแทน:
+API ต้องใช้ API key จึง **ไม่เรียกจากเบราว์เซอร์** แต่ให้เซิร์ฟเวอร์ดึงแทน:
 
-- `deploy/sync-progress.py` เรียก API ทุก 15 นาที (systemd timer) ตัดชื่อทิ้ง เหลือเพียง
-  `[วันที่เข้าเรียนล่าสุด, % ความคืบหน้า]` แล้วเขียนไฟล์ `/var/lib/codemonkey/progress.json`
+- `deploy/sync-progress.py` เรียก API ทุก 15 นาที (systemd timer) เก็บเฉพาะ
+  `[เวลาเข้าเรียนล่าสุด, % ความคืบหน้า, ชื่อ-นามสกุล]` แล้วเขียนไฟล์ `/var/lib/codemonkey/progress.json`
+- ⚠ รายชื่อผู้เรียน (รวมนักเรียนที่เป็นเด็ก) **เปิดให้ทุกคนที่มีลิงก์เห็นได้** — เป็นการตัดสินใจโดยเจ้าของโครงการ
 - nginx เสิร์ฟไฟล์นั้นที่ `/progress/data/progress.json` (อยู่นอก web root จึงไม่โดน rsync ลบตอน deploy)
 - API key เก็บที่ `/etc/codemonkey/api.env` (root เท่านั้น, 600) — **ห้าม commit คีย์ลง git**
 
@@ -139,7 +140,7 @@ sudo bash deploy/install-progress-sync.sh     # จะถามหา API key
 ## สรุปมาตรการความปลอดภัย ("hard to hack")
 
 - **ไม่มี backend / ฐานข้อมูล** — static ล้วน ลดพื้นผิวโจมตีเหลือน้อยสุด
-- **API key อยู่บนเซิร์ฟเวอร์เท่านั้น** — หน้า `/progress/` แสดงเฉพาะสถิติรวม ไม่มีชื่อผู้เรียน
+- **API key อยู่บนเซิร์ฟเวอร์เท่านั้น** — เบราว์เซอร์ได้รับเพียงไฟล์สรุป ไม่ได้เรียก LMS โดยตรง
 - **HTTPS บังคับ** + **HSTS preload** + TLS 1.2/1.3 เท่านั้น
 - **Content-Security-Policy** เข้มงวด: สคริปต์ทั้งหมด self-host, ห้าม inline script, จำกัดปลายทาง fetch
 - Security headers: `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, COOP/CORP

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # =============================================================================
 #  Pulls course watch-progress from the LMS "Code Monkey - Course Status" API
-#  and writes an ANONYMISED snapshot for the /progress/ dashboard.
+#  and writes a snapshot for the /progress/ dashboard.
 #
-#  The API key stays on the server (never shipped to the browser) and the
-#  output contains NO names - only each learner's last-activity date and
-#  average watch percentage.
+#  The API key stays on the server (never shipped to the browser). The output
+#  keeps only each learner's name, last-activity time and average watch
+#  percentage.
 #
 #  Run by the codemonkey-progress.timer systemd unit (see install-progress-sync.sh).
 #
@@ -38,21 +38,22 @@ def fetch(api_key):
         return json.load(resp)
 
 
-def anonymise(payload):
+def snapshot(payload):
     if not payload.get("status") or not isinstance(payload.get("data"), list):
         raise ValueError("API returned status=false or no data array: %r" % payload.get("message"))
     rows = payload["data"]
     learners = []
     for r in rows:
-        # cdate = latest watch-history update; keep the day only.
-        learners.append([str(r["cdate"])[:10], int(r["watch_percentage"])])
+        name = " ".join(str(r.get(k) or "").strip() for k in ("firstname", "lastname")).strip()
+        # cdate = latest watch-history update, to the minute.
+        learners.append([str(r["cdate"])[:16], int(r["watch_percentage"]), name])
     learners.sort()
     lessons = Counter(int(r["topic"]) for r in rows).most_common(1)
     return {
         "generated_at": datetime.now(BANGKOK).strftime("%Y-%m-%d %H:%M"),
         "total": len(learners),
         "lessons": lessons[0][0] if lessons else None,
-        "learners": learners,  # [last_activity_date, avg_watch_percent]
+        "learners": learners,  # [last_activity "YYYY-MM-DD HH:MM", avg_watch_percent, name]
     }
 
 
@@ -69,9 +70,9 @@ def main():
     api_key = os.environ.get("CM_API_KEY", "").strip()
     if not api_key:
         sys.exit("CM_API_KEY is not set")
-    snapshot = anonymise(fetch(api_key))
-    write_atomic(OUT_FILE, snapshot)
-    print("wrote %d learners to %s" % (snapshot["total"], OUT_FILE))
+    snap = snapshot(fetch(api_key))
+    write_atomic(OUT_FILE, snap)
+    print("wrote %d learners to %s" % (snap["total"], OUT_FILE))
 
 
 if __name__ == "__main__":

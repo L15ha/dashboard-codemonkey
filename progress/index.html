@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/css/styles.css?v=2" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=3" />
 </head>
 <body>
   <header class="topbar">
@@ -25,8 +25,8 @@
       </div>
     </div>
     <nav class="tabs" aria-label="เมนูหลัก">
-      <a href="../results/">ประกาศผลผู้ได้รับสิทธิ์</a>
       <a href="../progress/" aria-current="page">ความคืบหน้าการเรียน</a>
+      <a href="../results/">ประกาศผลผู้ได้รับสิทธิ์</a>
     </nav>
   </header>
 
@@ -78,13 +78,49 @@
       </div>
     </section>
 
+    <!-- Learner list -->
+    <section class="panel table-panel">
+      <div class="table-toolbar">
+        <h2>รายชื่อผู้เรียนและความคืบหน้า</h2>
+        <div class="table-controls">
+          <input id="searchBox" class="input" type="search" placeholder="🔍 ค้นหาชื่อ-นามสกุล…" autocomplete="off" />
+          <select id="statusFilter" class="input">
+            <option value="">ทุกสถานะ</option>
+            <option value="done">เรียนจบแล้ว</option>
+            <option value="ongoing">กำลังเรียน</option>
+          </select>
+          <select id="sortBy" class="input">
+            <option value="pct-desc">ความคืบหน้า มาก → น้อย</option>
+            <option value="pct-asc">ความคืบหน้า น้อย → มาก</option>
+            <option value="recent">เข้าเรียนล่าสุด</option>
+            <option value="name">ชื่อ ก → ฮ</option>
+          </select>
+          <button id="exportBtn" class="btn ghost" type="button">⬇ ส่งออก CSV</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-idx">ลำดับ</th>
+              <th>ชื่อ - นามสกุล</th>
+              <th class="col-progress">ความคืบหน้า</th>
+              <th>สถานะ</th>
+              <th>เข้าเรียนล่าสุด</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="table-foot"><span id="rowCount">—</span></div>
+    </section>
+
     <section class="panel notes">
       <h2>เกี่ยวกับข้อมูล</h2>
       <ul>
         <li>ข้อมูลจากระบบ LMS หมวด Code Monkey อัปเดตอัตโนมัติทุก 15 นาที</li>
         <li><strong>ความคืบหน้า</strong> = ค่าเฉลี่ยเปอร์เซ็นต์การดูวิดีโอของทุกบทเรียน (<span id="lessonCount">14</span> บท) · <strong>เรียนจบ</strong> = ค่าเฉลี่ย 100%</li>
         <li><strong>เข้าเรียนล่าสุด</strong> = วันที่มีการอัปเดตประวัติการดูวิดีโอครั้งล่าสุดของผู้เรียน</li>
-        <li>หน้านี้แสดงเฉพาะสถิติรวม ไม่มีการเผยแพร่ชื่อหรือข้อมูลส่วนบุคคลของผู้เรียน</li>
       </ul>
     </section>
   </main>
@@ -94,6 +130,6 @@
   </footer>
 
   <script src="../vendor/chart.umd.js"></script>
-  <script src="assets/js/app.js?v=2"></script>
+  <script src="assets/js/app.js?v=3"></script>
 </body>
 </html>
