@@ -133,6 +133,10 @@ sudo bash deploy/install-progress-sync.sh     # จะถามหา API key
 
 ตรวจสอบ: `systemctl list-timers codemonkey-progress.timer` และ `journalctl -u codemonkey-progress -n 20`
 
+**ซ่อนรายชื่อ:** ใส่ชื่อ-นามสกุล (ตามที่แสดงบนหน้าเว็บ) บรรทัดละ 1 ชื่อ ในไฟล์ `/etc/codemonkey/hidden-names.txt`
+รายชื่อเหล่านี้จะถูกตัดออกตั้งแต่ฝั่งเซิร์ฟเวอร์ (ไม่ถูกส่งถึงเบราว์เซอร์) มีผลในรอบ sync ถัดไป
+ชื่อที่ไม่พบใน LMS จะแจ้งเตือนใน `journalctl -u codemonkey-progress`
+
 > รันในเครื่อง: ถ้าไม่มี `progress/data/progress.json` หน้าเว็บจะใช้ `progress/data/sample.json` (ข้อมูลสมมติ) พร้อมแจ้งเตือน
 
 ---

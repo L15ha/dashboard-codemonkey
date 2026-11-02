@@ -1,11 +1,11 @@
 /* Code Monkey — course progress dashboard. LMS snapshot from data/progress.json:
-   learners = [[last_activity "YYYY-MM-DD HH:MM", avg_watch_percent, name], ...] */
+   learners = [[activated "YYYY-MM-DD HH:MM", avg_watch_percent, name], ...]
+   The LMS date is the activation time (it does not update), so it only drives the period filter + monthly chart. */
 (function () {
   "use strict";
 
   var DATA_URL = "data/progress.json";      // served by nginx from /var/lib/codemonkey (see deploy/)
   var FALLBACK_URL = "data/sample.json";    // synthetic data for local preview
-  var IDLE_DAYS = 30;
 
   var snap = null;
   var charts = {};
@@ -16,10 +16,6 @@
   function pct(n) { return (Math.round(n * 10) / 10).toLocaleString("th-TH") + "%"; }
   function parseDay(s) { var p = s.slice(0, 10).split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
   function esc(s) { return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
-  function when(s) {
-    return parseDay(s).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" }) +
-      (s.length > 10 ? " " + s.slice(11, 16) + " น." : "");
-  }
 
   /* ---------- data ---------- */
   function load() {
@@ -37,20 +33,17 @@
 
   /* ---------- KPIs ---------- */
   function renderKPIs(list) {
-    var done = 0, sum = 0, idle = 0;
-    var cutoff = parseDay(snap.generated_at.slice(0, 10));
-    cutoff.setDate(cutoff.getDate() - IDLE_DAYS);
+    var done = 0, sum = 0;
     list.forEach(function (l) {
       sum += Math.min(l[1], 100);
       if (l[1] >= 100) done++;
-      else if (parseDay(l[0]) < cutoff) idle++;
     });
     var n = list.length;
     $("kpiLearners").textContent = num(n);
     $("kpiComplete").textContent = num(done);
     $("kpiCompleteFoot").textContent = n ? pct(done / n * 100) + " ของผู้เรียน" : "—";
     $("kpiAvg").textContent = n ? pct(sum / n) : "—";
-    $("kpiIdle").textContent = num(idle);
+    $("kpiOngoing").textContent = num(n - done);
   }
 
   /* ---------- charts ---------- */
@@ -119,7 +112,6 @@
   var SORTS = {
     "pct-desc": function (a, b) { return b[1] - a[1] || (b[0] < a[0] ? -1 : b[0] > a[0] ? 1 : 0); },
     "pct-asc": function (a, b) { return a[1] - b[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0); },
-    "recent": function (a, b) { return b[0] < a[0] ? -1 : b[0] > a[0] ? 1 : 0; },
     "name": function (a, b) { return (a[2] || "").localeCompare(b[2] || "", "th"); }
   };
   function renderTable(list) {
@@ -138,18 +130,17 @@
         '<td><div class="progress-cell"><div class="bar' + (done ? " done" : "") + '"><span style="width:' + p + '%"></span></div>' +
           '<span class="progress-num">' + p + "%</span></div></td>" +
         "<td>" + (done ? '<span class="pill full">เรียนจบแล้ว</span>' : '<span class="pill ongoing">กำลังเรียน</span>') + "</td>" +
-        '<td class="when">' + esc(when(l[0])) + "</td>" +
       "</tr>";
     }).join("");
-    $("tableBody").innerHTML = html || '<tr><td class="empty" colspan="5">ไม่พบรายชื่อที่ตรงกับการค้นหา</td></tr>';
+    $("tableBody").innerHTML = html || '<tr><td class="empty" colspan="4">ไม่พบรายชื่อที่ตรงกับการค้นหา</td></tr>';
     $("rowCount").textContent = "แสดง " + num(shown.length) + " จาก " + num(list.length) + " รายชื่อ";
   }
 
   /* ---------- export ---------- */
   function exportCSV() {
-    var head = ["ลำดับ", "ชื่อ - นามสกุล", "ความคืบหน้า (%)", "สถานะ", "เข้าเรียนล่าสุด"];
+    var head = ["ลำดับ", "ชื่อ - นามสกุล", "ความคืบหน้า (%)", "สถานะ"];
     var lines = [head].concat(state.shown.map(function (l, i) {
-      return [i + 1, l[2], Math.min(l[1], 100), l[1] >= 100 ? "เรียนจบแล้ว" : "กำลังเรียน", l[0]];
+      return [i + 1, l[2], Math.min(l[1], 100), l[1] >= 100 ? "เรียนจบแล้ว" : "กำลังเรียน"];
     }));
     var csv = lines.map(function (row) {
       return row.map(function (c) { return '"' + String(c == null ? "" : c).replace(/"/g, '""') + '"'; }).join(",");

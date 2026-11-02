@@ -34,7 +34,7 @@
     <div class="notice" id="sampleNotice" hidden>⚠ ไม่สามารถโหลดข้อมูลจริงได้ — กำลังแสดงข้อมูลตัวอย่าง</div>
 
     <section class="period-bar" aria-label="ช่วงเวลา">
-      <span class="period-label">ผู้เรียนที่เข้าเรียนล่าสุด:</span>
+      <span class="period-label">ผู้เรียนที่ activate:</span>
       <div class="seg" id="periodSeg">
         <button type="button" data-from="" aria-pressed="true">ทั้งหมด</button>
         <button type="button" data-from="2026-01-01" aria-pressed="false">ในปี 2569</button>
@@ -60,9 +60,9 @@
         <div class="kpi-foot" id="kpiAvgFoot">ค่าเฉลี่ยการดูวิดีโอ</div>
       </div>
       <div class="kpi-card warn">
-        <div class="kpi-label">ไม่ได้เข้าเรียนเกิน 30 วัน</div>
-        <div class="kpi-value" id="kpiIdle">—</div>
-        <div class="kpi-foot">เฉพาะผู้ที่ยังเรียนไม่จบ</div>
+        <div class="kpi-label">กำลังเรียน</div>
+        <div class="kpi-value" id="kpiOngoing">—</div>
+        <div class="kpi-foot">ความคืบหน้ายังไม่ถึง 100%</div>
       </div>
     </section>
 
@@ -73,7 +73,7 @@
         <div class="chart-wrap"><canvas id="chartBuckets"></canvas></div>
       </div>
       <div class="panel">
-        <h2>การเข้าเรียนล่าสุด รายเดือน</h2>
+        <h2>จำนวนผู้เรียนที่ activate รายเดือน</h2>
         <div class="chart-wrap"><canvas id="chartMonthly"></canvas></div>
       </div>
     </section>
@@ -92,7 +92,6 @@
           <select id="sortBy" class="input">
             <option value="pct-desc">ความคืบหน้า มาก → น้อย</option>
             <option value="pct-asc">ความคืบหน้า น้อย → มาก</option>
-            <option value="recent">เข้าเรียนล่าสุด</option>
             <option value="name">ชื่อ ก → ฮ</option>
           </select>
           <button id="exportBtn" class="btn ghost" type="button">⬇ ส่งออก CSV</button>
@@ -106,7 +105,6 @@
               <th>ชื่อ - นามสกุล</th>
               <th class="col-progress">ความคืบหน้า</th>
               <th>สถานะ</th>
-              <th>เข้าเรียนล่าสุด</th>
             </tr>
           </thead>
           <tbody id="tableBody"></tbody>
@@ -120,7 +118,7 @@
       <ul>
         <li>ข้อมูลจากระบบ LMS หมวด Code Monkey อัปเดตอัตโนมัติทุก 15 นาที</li>
         <li><strong>ความคืบหน้า</strong> = ค่าเฉลี่ยเปอร์เซ็นต์การดูวิดีโอของทุกบทเรียน (<span id="lessonCount">14</span> บท) · <strong>เรียนจบ</strong> = ค่าเฉลี่ย 100%</li>
-        <li><strong>เข้าเรียนล่าสุด</strong> = วันที่มีการอัปเดตประวัติการดูวิดีโอครั้งล่าสุดของผู้เรียน</li>
+        <li><strong>activate</strong> = วันที่ผู้เรียนเปิดใช้งานคอร์สในระบบ LMS (ใช้กรองช่วงเวลาและกราฟรายเดือน)</li>
       </ul>
     </section>
   </main>
@@ -130,6 +128,6 @@
   </footer>
 
   <script src="../vendor/chart.umd.js"></script>
-  <script src="assets/js/app.js?v=3"></script>
+  <script src="assets/js/app.js?v=4"></script>
 </body>
 </html>

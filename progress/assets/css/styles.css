@@ -81,7 +81,6 @@ td.empty { text-align: center; color: var(--muted); padding: 28px; }
 .bar > span { display: block; height: 100%; border-radius: 999px; background: var(--brand); }
 .bar.done > span { background: var(--ok); }
 .progress-num { font-weight: 600; font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; }
-td.when { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .table-controls .input[type="search"] { min-width: 220px; }
 .table-panel { margin-bottom: 20px; }
 .sitefoot { text-align: center; color: var(--muted); font-size: 12.5px; padding: 24px; }

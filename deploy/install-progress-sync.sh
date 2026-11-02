@@ -23,7 +23,8 @@ install -D -m 755 "$REPO_DIR/deploy/sync-progress.py" /usr/local/bin/codemonkey-
 id cmsync >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin cmsync
 
 echo "==> Storing API key"
-install -d -m 700 /etc/codemonkey
+# dir is world-readable so cmsync can read hidden-names.txt; the key file itself stays 600 root
+install -d -m 755 /etc/codemonkey
 if [ -z "${CM_API_KEY:-}" ] && [ ! -f "$ENV_FILE" ]; then
   # prompt instead of passing the key on the command line (keeps it out of shell history)
   read -rsp "LMS API key: " CM_API_KEY; echo
