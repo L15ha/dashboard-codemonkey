@@ -38,6 +38,13 @@ else
   echo "!! No DOMAIN set — installing HTTP-only config"
   # strip the HTTPS server block; keep a plain HTTP server
   cat > "$SITE" <<'HTTPONLY'
+# Pages (HTML) must always be revalidated so visitors get updates immediately
+map $uri $cm_cache_control {
+    ~\.html$ "no-cache";
+    ~/$       "no-cache";
+    default   "";
+}
+
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
@@ -48,6 +55,7 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "DENY" always;
     add_header Referrer-Policy "no-referrer" always;
+    add_header Cache-Control $cm_cache_control always;
     location ~ /\.(?!well-known) { deny all; }
     location = /progress/data/progress.json { alias /var/lib/codemonkey/progress.json; default_type application/json; add_header Cache-Control "no-cache"; add_header X-Content-Type-Options "nosniff" always; }
     location / { try_files $uri $uri/ =404; }
