@@ -143,6 +143,32 @@ cd codemonkey-dashboard && git pull && bash deploy/deploy.sh
 
 ---
 
+## 6) หน้าความคืบหน้าการเรียน (`/progress/`) — ข้อมูลจาก LMS API
+
+หน้า `/progress/` แสดงสถิติการเรียนคอร์ส Code Monkey จาก **LMS Course Status API**
+(ผู้เรียนทั้งหมด / เรียนจบ / ความคืบหน้าเฉลี่ย / ไม่ได้เข้าเรียนเกิน 30 วัน / กราฟรายเดือน)
+
+API ต้องใช้ API key และส่งชื่อผู้เรียนกลับมา จึง **ไม่เรียกจากเบราว์เซอร์** แต่ให้เซิร์ฟเวอร์ดึงแทน:
+
+- `deploy/sync-progress.py` เรียก API ทุก 15 นาที (systemd timer) ตัดชื่อทิ้ง เหลือเพียง
+  `[วันที่เข้าเรียนล่าสุด, % ความคืบหน้า]` แล้วเขียนไฟล์ `/var/lib/codemonkey/progress.json`
+- nginx เสิร์ฟไฟล์นั้นที่ `/progress/data/progress.json` (อยู่นอก web root จึงไม่โดน rsync ลบตอน deploy)
+- API key เก็บที่ `/etc/codemonkey/api.env` (root เท่านั้น, 600) — **ห้าม commit คีย์ลง git**
+
+ติดตั้งบน EC2 (ครั้งเดียว หลัง `setup-server.sh`):
+
+```bash
+sed "s/DOMAIN_PLACEHOLDER/dashboard.example.com/g" deploy/nginx.conf | sudo tee /etc/nginx/sites-available/codemonkey >/dev/null
+sudo nginx -t && sudo systemctl reload nginx
+sudo bash deploy/install-progress-sync.sh     # จะถามหา API key
+```
+
+ตรวจสอบ: `systemctl list-timers codemonkey-progress.timer` และ `journalctl -u codemonkey-progress -n 20`
+
+> รันในเครื่อง: ถ้าไม่มี `progress/data/progress.json` หน้าเว็บจะใช้ `progress/data/sample.json` (ข้อมูลสมมติ) พร้อมแจ้งเตือน
+
+---
+
 ## สรุปมาตรการความปลอดภัย ("hard to hack")
 
 - **ไม่มี backend / ฐานข้อมูล** — static ล้วน ลดพื้นผิวโจมตีเหลือน้อยสุด

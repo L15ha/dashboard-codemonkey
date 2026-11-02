@@ -17,3 +17,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Live LMS snapshot (generated on the server, never committed)
+progress/data/progress.json

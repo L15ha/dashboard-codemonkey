@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="no-referrer" />
+  <title>ความคืบหน้าการเรียน โปรแกรม Code Monkey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=1" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark">CM</div>
+        <div>
+          <h1>ความคืบหน้าการเรียน</h1>
+          <p class="subtitle">โปรแกรม Code Monkey — สถานะการเรียนคอร์สออนไลน์จากระบบ LMS</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span class="announce-date" id="updatedAt">กำลังโหลดข้อมูล…</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="notice" id="sampleNotice" hidden>⚠ ไม่สามารถโหลดข้อมูลจริงได้ — กำลังแสดงข้อมูลตัวอย่าง</div>
+
+    <section class="period-bar" aria-label="ช่วงเวลา">
+      <span class="period-label">ผู้เรียนที่เข้าเรียนล่าสุด:</span>
+      <div class="seg" id="periodSeg">
+        <button type="button" data-from="" aria-pressed="true">ทั้งหมด</button>
+        <button type="button" data-from="2026-01-01" aria-pressed="false">ในปี 2569</button>
+        <button type="button" data-from="2026-09-07" aria-pressed="false">หลังประกาศผล (7 ก.ย. 69)</button>
+      </div>
+    </section>
+
+    <!-- KPI cards -->
+    <section class="kpi-grid four" aria-label="สรุปภาพรวม">
+      <div class="kpi-card accent">
+        <div class="kpi-label">ผู้เรียน</div>
+        <div class="kpi-value" id="kpiLearners">—</div>
+        <div class="kpi-foot">บัญชีที่มีประวัติการเรียน</div>
+      </div>
+      <div class="kpi-card ok">
+        <div class="kpi-label">เรียนจบแล้ว</div>
+        <div class="kpi-value" id="kpiComplete">—</div>
+        <div class="kpi-foot" id="kpiCompleteFoot">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">ความคืบหน้าเฉลี่ย</div>
+        <div class="kpi-value" id="kpiAvg">—</div>
+        <div class="kpi-foot" id="kpiAvgFoot">ค่าเฉลี่ยการดูวิดีโอ</div>
+      </div>
+      <div class="kpi-card warn">
+        <div class="kpi-label">ไม่ได้เข้าเรียนเกิน 30 วัน</div>
+        <div class="kpi-value" id="kpiIdle">—</div>
+        <div class="kpi-foot">เฉพาะผู้ที่ยังเรียนไม่จบ</div>
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="chart-grid">
+      <div class="panel">
+        <h2>ระดับความคืบหน้าของผู้เรียน</h2>
+        <div class="chart-wrap"><canvas id="chartBuckets"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2>การเข้าเรียนล่าสุด รายเดือน</h2>
+        <div class="chart-wrap"><canvas id="chartMonthly"></canvas></div>
+      </div>
+    </section>
+
+    <section class="panel notes">
+      <h2>เกี่ยวกับข้อมูล</h2>
+      <ul>
+        <li>ข้อมูลจากระบบ LMS หมวด Code Monkey อัปเดตอัตโนมัติทุก 15 นาที</li>
+        <li><strong>ความคืบหน้า</strong> = ค่าเฉลี่ยเปอร์เซ็นต์การดูวิดีโอของทุกบทเรียน (<span id="lessonCount">14</span> บท) · <strong>เรียนจบ</strong> = ค่าเฉลี่ย 100%</li>
+        <li><strong>เข้าเรียนล่าสุด</strong> = วันที่มีการอัปเดตประวัติการดูวิดีโอครั้งล่าสุดของผู้เรียน</li>
+        <li>หน้านี้แสดงเฉพาะสถิติรวม ไม่มีการเผยแพร่ชื่อหรือข้อมูลส่วนบุคคลของผู้เรียน</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="sitefoot">
+    <span>โปรแกรม Code Monkey · <a href="../results/">ประกาศผลผู้ได้รับสิทธิ์</a></span>
+  </footer>
+
+  <script src="../vendor/chart.umd.js"></script>
+  <script src="assets/js/app.js?v=1"></script>
+</body>
+</html>

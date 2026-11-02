@@ -49,6 +49,7 @@ server {
     add_header X-Frame-Options "DENY" always;
     add_header Referrer-Policy "no-referrer" always;
     location ~ /\.(?!well-known) { deny all; }
+    location = /progress/data/progress.json { alias /var/lib/codemonkey/progress.json; default_type application/json; add_header Cache-Control "no-cache"; }
     location / { try_files $uri $uri/ =404; }
 }
 HTTPONLY
