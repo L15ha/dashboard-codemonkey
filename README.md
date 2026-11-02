@@ -1,14 +1,9 @@
-# แดชบอร์ดการขออนุมัติสิทธิ์ โปรแกรม Code Monkey
+# แดชบอร์ดโปรแกรม Code Monkey
 
-Dashboard สรุปคำขอรับการจัดสรรสิทธิ์โปรแกรม Code Monkey จากสถานศึกษา
-อ่านข้อมูล **สด (live)** จาก Google Sheets แสดงตารางและกราฟสรุป
+เว็บ static (HTML/CSS/JS) มี 2 หน้า สลับกันได้จากแถบเมนูด้านบน:
 
-- คอลัมน์เรียงใหม่ตามที่กำหนด: **ชื่อสถานศึกษา → จังหวัด → อำเภอ/เขต → ตำบล/แขวง** ขึ้นก่อน
-- คอลัมน์ Q3 เปลี่ยนชื่อหัวข้อเป็น **"จำนวนที่ขออนุมัติสิทธิ"**
-- คอลัมน์ท้ายสุด **"สถานะการอนุมัติ"** = **"อยู่ระหว่างพิจารณา"** ทุกแถว
-- แสดง **เฉพาะคอลัมน์ที่ไม่ใช่ข้อมูลส่วนบุคคล** (ไม่รวมชื่อ-นามสกุล / เบอร์โทร / อีเมล)
-
-เป็นเว็บ static ล้วน (HTML/CSS/JS) — ไม่มี backend, ไม่มีฐานข้อมูล จึงมีพื้นผิวการโจมตี (attack surface) น้อยที่สุด
+- **ประกาศผลผู้ได้รับสิทธิ์** (`/results/`) — หน้าแรก (`/` จะพาไปหน้านี้) ข้อมูลรายชื่อฝังในไฟล์ `results/assets/js/data.js`
+- **ความคืบหน้าการเรียน** (`/progress/`) — สถิติการเรียนจาก LMS API (ไม่มีชื่อผู้เรียน) ดูข้อ 5
 
 ---
 
@@ -16,54 +11,26 @@ Dashboard สรุปคำขอรับการจัดสรรสิท�
 
 ```
 Dashboard Codemonkey/
-├─ index.html                 หน้าเว็บหลัก
-├─ assets/
-│  ├─ css/styles.css
-│  ├─ js/config.js            ⬅ ใส่ลิงก์ CSV ที่นี่
-│  ├─ js/app.js               โหลด/แปลง/แสดงผลข้อมูล
-│  └─ data/sample.csv         ข้อมูลตัวอย่าง (fallback)
-├─ vendor/                    ไลบรารีที่ self-host (Chart.js, PapaParse)
-├─ deploy/                    สคริปต์ติดตั้ง + ตั้งค่าความปลอดภัยบน EC2
+├─ index.html                 หน้าแรก → พาไป results/
+├─ results/                   หน้าประกาศผล (index.html, assets/, vendor/)
+├─ progress/                  หน้าความคืบหน้าการเรียน
+│  ├─ assets/js/app.js
+│  └─ data/sample.json        ข้อมูลสมมติ (ใช้ตอนรันในเครื่อง)
+├─ vendor/chart.umd.js        Chart.js (self-host)
+├─ deploy/                    สคริปต์ติดตั้ง + ตั้งค่าความปลอดภัยบน EC2 + sync ข้อมูล LMS
 │  ├─ nginx.conf
 │  ├─ setup-server.sh
 │  ├─ harden.sh
-│  └─ deploy.sh
+│  ├─ deploy.sh
+│  ├─ sync-progress.py
+│  └─ install-progress-sync.sh
 ├─ .github/workflows/deploy.yml   auto-deploy ขึ้น EC2 เมื่อ push
 └─ .gitignore
 ```
 
 ---
 
-## 1) เชื่อมข้อมูลสดจาก Google Sheets (เผยแพร่เฉพาะคอลัมน์ที่ปลอดภัย)
-
-ชีตต้นทางเป็นแบบส่วนตัวและมีข้อมูลส่วนบุคคล เราจึงสร้าง **แท็บใหม่ที่ดึงเฉพาะคอลัมน์ที่ไม่ใช่ PII** แล้วเผยแพร่เฉพาะแท็บนั้น ข้อมูลชื่อ/เบอร์/อีเมล จะไม่ถูกเปิดเผย
-
-1. เปิด Google Sheet → กด **＋** (เพิ่มชีต) ที่มุมล่างซ้าย ตั้งชื่อแท็บว่า `Dashboard`
-2. คลิกเซลล์ **A1** วางสูตรนี้แล้วกด Enter:
-
-   ```
-   =QUERY('การตอบแบบฟอร์ม 1'!A2:P,"select H,I,J,K,G,F,E,P,L,M,N,O where H is not null",0)
-   ```
-
-   สูตรนี้ดึงเฉพาะ 12 คอลัมน์ที่ต้องใช้ (ไม่รวมชื่อ/เบอร์/อีเมล) เรียงตามลำดับที่ต้องการ
-3. เมนู **ไฟล์ → แชร์ → เผยแพร่ไปยังเว็บ** (File → Share → Publish to web)
-   - ช่องซ้าย เลือกแท็บ **Dashboard** (อย่าเลือก "ทั้งเอกสาร")
-   - ช่องขวา เลือก **ค่าที่คั่นด้วยจุลภาค (.csv)**
-   - กด **เผยแพร่** → ยืนยัน
-4. คัดลอกลิงก์ที่ได้ (หน้าตาแบบ `https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?gid=...&single=true&output=csv`)
-5. เปิด `assets/js/config.js` แล้วแทนที่ค่า `DATA_CSV_URL`:
-
-   ```js
-   DATA_CSV_URL: "วางลิงก์ CSV ที่นี่",
-   ```
-
-เปิด `index.html` แล้วข้อมูลสดจะแสดงขึ้นมา ปุ่ม **↻ รีเฟรช** จะดึงข้อมูลล่าสุดทุกครั้ง
-
-> ถ้ายังไม่ตั้งค่า ลิงก์ แดชบอร์ดจะใช้ `assets/data/sample.csv` เป็นข้อมูลตัวอย่างชั่วคราว
-
----
-
-## 2) รันในเครื่อง (local)
+## 1) รันในเครื่อง (local)
 
 เป็นเว็บ static เปิดด้วยเซิร์ฟเวอร์ไฟล์ธรรมดา:
 
@@ -76,7 +43,7 @@ python3 -m http.server 8080
 
 ---
 
-## 3) ขึ้น Git / GitHub
+## 2) ขึ้น Git / GitHub
 
 ```bash
 cd "Dashboard Codemonkey"
@@ -92,16 +59,16 @@ git push -u origin main
 
 ---
 
-## 4) Deploy ขึ้น EC2 (พร้อม hardening ความปลอดภัย)
+## 3) Deploy ขึ้น EC2 (พร้อม hardening ความปลอดภัย)
 
-### 4.1 เตรียม EC2
+### 3.1 เตรียม EC2
 - สร้าง instance **Ubuntu 22.04/24.04** (t3.micro พอ)
 - **Security Group** เปิดเฉพาะ: `22 (SSH)`, `80 (HTTP)`, `443 (HTTPS)` — ปิดพอร์ตอื่นทั้งหมด
   - แนะนำให้จำกัด SSH (22) ให้เฉพาะ IP ของคุณ (`My IP`)
 - ใช้ **key pair** สำหรับ SSH (ไม่ใช้รหัสผ่าน)
 - (แนะนำ) ชี้ **โดเมน** มาที่ Public IP ของ instance เพื่อออกใบรับรอง HTTPS
 
-### 4.2 ติดตั้ง
+### 3.2 ติดตั้ง
 SSH เข้า instance แล้วดึงโค้ด:
 
 ```bash
@@ -121,15 +88,15 @@ sudo DOMAIN=dashboard.example.com EMAIL=you@example.com bash deploy/setup-server
 
 > ยังไม่มีโดเมน? รันโดยไม่ใส่ `DOMAIN` ได้ (จะเป็น HTTP ก่อน) แล้วค่อยรันซ้ำพร้อมโดเมนภายหลัง
 
-### 4.3 อัปเดตครั้งถัดไป
+### 3.3 อัปเดตครั้งถัดไป
 ```bash
 cd codemonkey-dashboard && git pull && bash deploy/deploy.sh
 ```
-หรือปล่อยให้ **GitHub Actions** deploy อัตโนมัติเมื่อ push (ดูข้อ 5)
+หรือปล่อยให้ **GitHub Actions** deploy อัตโนมัติเมื่อ push (ดูข้อ 4)
 
 ---
 
-## 5) Auto-deploy ด้วย GitHub Actions
+## 4) Auto-deploy ด้วย GitHub Actions
 
 ไฟล์ `.github/workflows/deploy.yml` จะ deploy ให้อัตโนมัติทุกครั้งที่ push ขึ้น `main`
 ตั้งค่า **Secrets** ใน GitHub (Settings → Secrets and variables → Actions):
@@ -143,7 +110,7 @@ cd codemonkey-dashboard && git pull && bash deploy/deploy.sh
 
 ---
 
-## 6) หน้าความคืบหน้าการเรียน (`/progress/`) — ข้อมูลจาก LMS API
+## 5) หน้าความคืบหน้าการเรียน (`/progress/`) — ข้อมูลจาก LMS API
 
 หน้า `/progress/` แสดงสถิติการเรียนคอร์ส Code Monkey จาก **LMS Course Status API**
 (ผู้เรียนทั้งหมด / เรียนจบ / ความคืบหน้าเฉลี่ย / ไม่ได้เข้าเรียนเกิน 30 วัน / กราฟรายเดือน)
@@ -172,7 +139,7 @@ sudo bash deploy/install-progress-sync.sh     # จะถามหา API key
 ## สรุปมาตรการความปลอดภัย ("hard to hack")
 
 - **ไม่มี backend / ฐานข้อมูล** — static ล้วน ลดพื้นผิวโจมตีเหลือน้อยสุด
-- **ไม่เปิดเผย PII** — เผยแพร่เฉพาะคอลัมน์ที่ไม่ใช่ข้อมูลส่วนบุคคล
+- **API key อยู่บนเซิร์ฟเวอร์เท่านั้น** — หน้า `/progress/` แสดงเฉพาะสถิติรวม ไม่มีชื่อผู้เรียน
 - **HTTPS บังคับ** + **HSTS preload** + TLS 1.2/1.3 เท่านั้น
 - **Content-Security-Policy** เข้มงวด: สคริปต์ทั้งหมด self-host, ห้าม inline script, จำกัดปลายทาง fetch
 - Security headers: `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, COOP/CORP
