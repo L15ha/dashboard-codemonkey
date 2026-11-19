@@ -30,8 +30,11 @@ if [ -z "${CM_API_KEY:-}" ] && [ ! -f "$ENV_FILE" ]; then
   read -rsp "LMS API key: " CM_API_KEY; echo
 fi
 if [ -n "${CM_API_KEY:-}" ]; then
+  # replace only the LMS key line; other keys in the file (e.g. CM_CODEMONKEY_KEY) are kept
   umask 077
-  printf 'CM_API_KEY=%s\n' "$CM_API_KEY" > "$ENV_FILE"
+  touch "$ENV_FILE"
+  sed -i '/^CM_API_KEY=/d' "$ENV_FILE"
+  printf 'CM_API_KEY=%s\n' "$CM_API_KEY" >> "$ENV_FILE"
 fi
 chmod 600 "$ENV_FILE"
 
