@@ -141,6 +141,34 @@ sudo bash deploy/install-progress-sync.sh     # จะถามหา API key
 
 ---
 
+## 6) แหล่งข้อมูล CodeMonkey API
+
+ใช้ endpoint รายชื่อผู้เรียนของ CodeMonkey (`/api/v1/users.json`: uid, ชื่อ, วันที่สร้างบัญชี, เข้าใช้งานล่าสุด):
+
+- `deploy/sync-codemonkey.py` ดึงรายชื่อผู้เรียน แล้วดึง % ความคืบหน้า Coding Adventure ตอนที่ 1–3
+  (`GET /api/v1/users/{uid}/courses.json`) **เฉพาะคนที่เพิ่งเข้าใช้งาน** หรือไม่ได้อัปเดตเกิน 7 วัน ทุก 1 ชั่วโมง
+  (sync ครั้งแรกทั้งหมด ~1,500 คน ใช้เวลาประมาณ 6–7 นาที) — ตัวเลขหลัก = % ตอนที่ 1
+- เขียนไฟล์เดิม `/var/lib/codemonkey/progress.json` (`"source": "codemonkey"`) หน้าเว็บจะสลับรูปแบบให้เอง:
+  คอลัมน์รายตอน, เข้าใช้งานล่าสุด, ซ่อนแถบ "ข้อมูลอยู่ระหว่างตรวจสอบ"
+- key อยู่ใน `/etc/codemonkey/api.env` ชื่อ `CM_CODEMONKEY_KEY` (root เท่านั้น)
+- **โรงเรียน/จังหวัด** (CodeMonkey ไม่มีข้อมูลนี้): วางไฟล์ `/etc/codemonkey/roster.csv` (UTF-8, มีหัวคอลัมน์)
+  `uid,name,school,province` — ใส่ `uid` (จับคู่แม่นที่สุด) หรือ `name` (หรือ `firstname,lastname`) อย่างใดอย่างหนึ่ง
+  การจับคู่ด้วยชื่อจะไม่สนคำนำหน้า (ด.ช./ด.ญ./นาย/นางสาว ฯลฯ) และช่องว่าง เมื่อมีข้อมูลนี้ หน้าเว็บจะมีตัวกรองจังหวัด/โรงเรียน
+
+เปิดใช้งาน (บน EC2):
+
+```bash
+sudo bash deploy/install-codemonkey-sync.sh
+# แสดงเฉพาะรุ่นเดียว (บัญชีที่สร้างตั้งแต่วันที่กำหนด): sudo CM_CM_CREATED_FROM=2026-09-01 bash deploy/install-codemonkey-sync.sh
+```
+
+สคริปต์จะ sync ครั้งแรก ถ้าสำเร็จจึงปิด timer ของ LMS แล้วเปิด timer ของ CodeMonkey (ถ้าล้มเหลวจะไม่เปลี่ยนอะไร)
+ย้อนกลับไปใช้ LMS: `sudo bash deploy/install-codemonkey-sync.sh --rollback`
+
+ตรวจสอบ: `journalctl -u codemonkey-cm -n 20`
+
+---
+
 ## สรุปมาตรการความปลอดภัย ("hard to hack")
 
 - **ไม่มี backend / ฐานข้อมูล** — static ล้วน ลดพื้นผิวโจมตีเหลือน้อยสุด

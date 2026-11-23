@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/css/styles.css?v=3" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=5" />
 </head>
 <body>
   <header class="topbar">
@@ -31,12 +31,12 @@
   </header>
 
   <main class="container">
-    <!-- Temporary: LMS API returns incomplete data (516 rows vs 1,000+ activated). Remove once fixed. -->
-    <div class="notice" role="status">ℹ ข้อมูลอยู่ระหว่างตรวจสอบกับระบบ LMS — จำนวนผู้เรียนและรายชื่อที่แสดงอาจยังไม่ครบถ้วน</div>
+    <!-- LMS data is incomplete (516 rows vs 1,000+ activated); app.js hides this once CodeMonkey data is live. -->
+    <div class="notice" id="reviewNotice" role="status">ℹ ข้อมูลอยู่ระหว่างตรวจสอบกับระบบ LMS — จำนวนผู้เรียนและรายชื่อที่แสดงอาจยังไม่ครบถ้วน</div>
     <div class="notice" id="sampleNotice" hidden>⚠ ไม่สามารถโหลดข้อมูลจริงได้ — กำลังแสดงข้อมูลตัวอย่าง</div>
 
     <section class="period-bar" aria-label="ช่วงเวลา">
-      <span class="period-label">ผู้เรียนที่ activate:</span>
+      <span class="period-label" id="periodLabel">ผู้เรียนที่ activate:</span>
       <div class="seg" id="periodSeg">
         <button type="button" data-from="" aria-pressed="true">ทั้งหมด</button>
         <button type="button" data-from="2026-01-01" aria-pressed="false">ในปี 2569</button>
@@ -52,7 +52,7 @@
         <div class="kpi-foot">บัญชีที่มีประวัติการเรียน</div>
       </div>
       <div class="kpi-card ok">
-        <div class="kpi-label">เรียนจบแล้ว</div>
+        <div class="kpi-label" id="kpiCompleteLabel">เรียนจบแล้ว</div>
         <div class="kpi-value" id="kpiComplete">—</div>
         <div class="kpi-foot" id="kpiCompleteFoot">—</div>
       </div>
@@ -64,18 +64,18 @@
       <div class="kpi-card warn">
         <div class="kpi-label">กำลังเรียน</div>
         <div class="kpi-value" id="kpiOngoing">—</div>
-        <div class="kpi-foot">ความคืบหน้ายังไม่ถึง 100%</div>
+        <div class="kpi-foot" id="kpiOngoingFoot">ความคืบหน้ายังไม่ถึง 100%</div>
       </div>
     </section>
 
     <!-- Charts -->
     <section class="chart-grid">
       <div class="panel">
-        <h2>ระดับความคืบหน้าของผู้เรียน</h2>
+        <h2 id="bucketsTitle">ระดับความคืบหน้าของผู้เรียน</h2>
         <div class="chart-wrap"><canvas id="chartBuckets"></canvas></div>
       </div>
       <div class="panel">
-        <h2>จำนวนผู้เรียนที่ activate รายเดือน</h2>
+        <h2 id="monthlyTitle">จำนวนผู้เรียนที่ activate รายเดือน</h2>
         <div class="chart-wrap"><canvas id="chartMonthly"></canvas></div>
       </div>
     </section>
@@ -86,6 +86,8 @@
         <h2>รายชื่อผู้เรียนและความคืบหน้า</h2>
         <div class="table-controls">
           <input id="searchBox" class="input" type="search" placeholder="🔍 ค้นหาชื่อ-นามสกุล…" autocomplete="off" />
+          <select id="provinceFilter" class="input" hidden><option value="">ทุกจังหวัด</option></select>
+          <select id="schoolFilter" class="input" hidden><option value="">ทุกโรงเรียน</option></select>
           <select id="statusFilter" class="input">
             <option value="">ทุกสถานะ</option>
             <option value="done">เรียนจบแล้ว</option>
@@ -102,12 +104,7 @@
       <div class="table-scroll">
         <table>
           <thead>
-            <tr>
-              <th class="col-idx">ลำดับ</th>
-              <th>ชื่อ - นามสกุล</th>
-              <th class="col-progress">ความคืบหน้า</th>
-              <th>สถานะ</th>
-            </tr>
+            <tr id="tableHead"></tr>
           </thead>
           <tbody id="tableBody"></tbody>
         </table>
@@ -117,7 +114,7 @@
 
     <section class="panel notes">
       <h2>เกี่ยวกับข้อมูล</h2>
-      <ul>
+      <ul id="notesList">
         <li>ข้อมูลจากระบบ LMS หมวด Code Monkey อัปเดตอัตโนมัติทุก 15 นาที</li>
         <li><strong>ความคืบหน้า</strong> = ค่าเฉลี่ยเปอร์เซ็นต์การดูวิดีโอของทุกบทเรียน (<span id="lessonCount">14</span> บท) · <strong>เรียนจบ</strong> = ค่าเฉลี่ย 100%</li>
         <li><strong>activate</strong> = วันที่ผู้เรียนเปิดใช้งานคอร์สในระบบ LMS (ใช้กรองช่วงเวลาและกราฟรายเดือน)</li>
@@ -126,10 +123,10 @@
   </main>
 
   <footer class="sitefoot">
-    <span>โปรแกรม Code Monkey · ข้อมูลจากระบบ LMS</span>
+    <span>โปรแกรม Code Monkey · <span id="footSource">ข้อมูลจากระบบ LMS</span></span>
   </footer>
 
   <script src="../vendor/chart.umd.js"></script>
-  <script src="assets/js/app.js?v=4"></script>
+  <script src="assets/js/app.js?v=7"></script>
 </body>
 </html>
