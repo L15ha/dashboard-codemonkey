@@ -50,10 +50,11 @@ USERS_PATH = os.environ.get("CM_CM_USERS_PATH", "/api/v1/users.json")
 CREATED_FROM = os.environ.get("CM_CM_CREATED_FROM", "").strip()
 COURSES = [c.strip() for c in os.environ.get(
     "CM_CM_COURSES", "coding_adventure_part_1,coding_adventure_part_2,coding_adventure_part_3").split(",") if c.strip()]
+# key -> (full name for headers/notes, short name for status badges and summary cards)
 COURSE_LABELS = {
-    "coding_adventure_part_1": "ตอนที่ 1",
-    "coding_adventure_part_2": "ตอนที่ 2",
-    "coding_adventure_part_3": "ตอนที่ 3",
+    "coding_adventure_part_1": ("Coding Adventure Part I: Fundamentals", "Part I"),
+    "coding_adventure_part_2": ("Coding Adventure Part II: Functions & Conditions", "Part II"),
+    "coding_adventure_part_3": ("Coding Adventure Part III: Logic & Events", "Part III"),
 }
 OUT_FILE = os.environ.get("CM_OUT_FILE", "/var/lib/codemonkey/progress.json")
 STATE_FILE = os.environ.get("CM_STATE_FILE", "/var/lib/codemonkey/cm-state.json")
@@ -266,7 +267,7 @@ def main():
         "hidden": len(hidden_hits),
         "roster_matched": matched,
         "created_from": CREATED_FROM,
-        "courses": [{"key": c, "label": COURSE_LABELS.get(c, c)} for c in COURSES],
+        "courses": [{"key": c, "label": COURSE_LABELS.get(c, (c, c))[0], "short": COURSE_LABELS.get(c, (c, c))[1]} for c in COURSES],
         # [last_sign_in "YYYY-MM-DD HH:MM", main % (first course), name, school, province, <% per course in "courses">]
         "learners": learners,
     })

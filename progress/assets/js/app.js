@@ -13,7 +13,8 @@
   var charts = {};
   var state = { from: "", q: "", status: "", prov: "", school: "", sort: "pct-desc", shown: [] };
 
-  /* Per-source wording. CodeMonkey data has a real last sign-in, per-course progress and (with a roster) schools. */
+  /* Per-source wording (a value may be a function, evaluated once data is loaded).
+     CodeMonkey data has a real last sign-in, per-course progress and (with a roster) schools. */
   var SOURCES = {
     lms: {
       periodLabel: "ผู้เรียนที่ activate:",
@@ -29,17 +30,17 @@
     codemonkey: {
       periodLabel: "เข้าใช้งานล่าสุด:",
       periods: function () { return [["", "ทั้งหมด"], [daysAgo(7), "ภายใน 7 วัน"], [daysAgo(30), "ภายใน 30 วัน"]]; },
-      completeLabel: "จบตอนที่ 1 แล้ว",
-      bucketsTitle: "ระดับความคืบหน้าของผู้เรียน (ตอนที่ 1)",
+      completeLabel: function () { return "จบ " + mainShort() + " แล้ว"; },
+      bucketsTitle: function () { return "ระดับความคืบหน้าของผู้เรียน (" + snap.courses[0].label + ")"; },
       monthlyTitle: "การเข้าใช้งานล่าสุด รายเดือน",
-      avgFoot: "ค่าเฉลี่ยความคืบหน้าตอนที่ 1",
-      ongoingFoot: "ยังไม่จบตอนที่ 1",
+      avgFoot: function () { return "ค่าเฉลี่ยความคืบหน้า " + mainShort(); },
+      ongoingFoot: function () { return "ยังไม่จบ " + mainShort(); },
       foot: "ข้อมูลจาก CodeMonkey",
       notes: function () {
         return [
           "ข้อมูลจากระบบ CodeMonkey โดยตรง อัปเดตอัตโนมัติทุกชั่วโมง",
-          "<strong>ความคืบหน้า</strong> = เปอร์เซ็นต์ที่ทำได้ในแต่ละตอนของ Coding Adventure (" +
-            snap.courses.map(function (c) { return esc(c.label); }).join(", ") + ") · ตัวเลขหลักและสถานะ \"จบ\" ใช้ " + esc(snap.courses[0].label) + " ซึ่งผู้เรียนเกือบทั้งหมดกำลังเรียนอยู่",
+          "<strong>ความคืบหน้า</strong> = เปอร์เซ็นต์ที่ทำได้ในแต่ละคอร์ส: " +
+            snap.courses.map(function (c) { return esc(c.label); }).join(", ") + " · ตัวเลขหลักและสถานะ \"จบ\" ใช้ " + esc(snap.courses[0].label) + " ซึ่งผู้เรียนเกือบทั้งหมดกำลังเรียนอยู่",
           "<strong>เข้าใช้งานล่าสุด</strong> = ครั้งล่าสุดที่ผู้เรียนเข้าสู่ระบบ CodeMonkey",
           hasRoster ? "ข้อมูลโรงเรียนและจังหวัดจับคู่จากรายชื่อนักเรียนของโครงการ" : ""
         ].filter(Boolean);
@@ -53,6 +54,9 @@
   function parseDay(s) { var p = s.slice(0, 10).split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
   function ymd(d) { return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
   function daysAgo(n) { var d = parseDay(snap.generated_at); d.setDate(d.getDate() - n); return ymd(d); }
+  function shortLabel(c) { return c.short || c.label; }
+  function mainShort() { return shortLabel(snap.courses[0]); }
+  function val(x) { return typeof x === "function" ? x() : x; }
   function esc(s) { return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function when(s) {
     return s ? parseDay(s).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" }) + " " + s.slice(11, 16) + " น." : "—";
@@ -61,7 +65,7 @@
   function isDone(l) { return cm ? l[PARTS] >= 100 : l[P] >= 100; }
   function statusText(l) {
     if (!cm) return l[P] >= 100 ? "เรียนจบแล้ว" : "กำลังเรียน";
-    for (var i = snap.courses.length - 1; i >= 0; i--) if (l[PARTS + i] >= 100) return "จบ" + snap.courses[i].label;
+    for (var i = snap.courses.length - 1; i >= 0; i--) if (l[PARTS + i] >= 100) return "จบ " + shortLabel(snap.courses[i]);
     return "กำลังเรียน";
   }
 
@@ -144,8 +148,8 @@
     charts.monthly = new Chart($("chartMonthly"), {
       type: "bar",
       data: { labels: keys.map(monthLabel), datasets: [
-        { label: cm ? "จบตอนที่ 1 แล้ว" : "เรียนจบแล้ว", data: done, backgroundColor: "#16a34a" },
-        { label: cm ? "ยังไม่จบตอนที่ 1" : "ยังไม่จบ", data: ongoing, backgroundColor: "#93c5fd" }] },
+        { label: cm ? "จบ " + mainShort() + " แล้ว" : "เรียนจบแล้ว", data: done, backgroundColor: "#16a34a" },
+        { label: cm ? "ยังไม่จบ " + mainShort() : "ยังไม่จบ", data: ongoing, backgroundColor: "#93c5fd" }] },
       options: baseOpts({ legend: true, stacked: true })
     });
   }
@@ -272,14 +276,14 @@
     $("periodSeg").innerHTML = src.periods().map(function (p, i) {
       return '<button type="button" data-from="' + p[0] + '" aria-pressed="' + (i === 0) + '">' + esc(p[1]) + "</button>";
     }).join("");
-    $("kpiCompleteLabel").textContent = src.completeLabel;
-    $("bucketsTitle").textContent = src.bucketsTitle;
-    $("monthlyTitle").textContent = src.monthlyTitle;
-    $("kpiAvgFoot").textContent = src.avgFoot;
-    $("kpiOngoingFoot").textContent = src.ongoingFoot;
+    $("kpiCompleteLabel").textContent = val(src.completeLabel);
+    $("bucketsTitle").textContent = val(src.bucketsTitle);
+    $("monthlyTitle").textContent = val(src.monthlyTitle);
+    $("kpiAvgFoot").textContent = val(src.avgFoot);
+    $("kpiOngoingFoot").textContent = val(src.ongoingFoot);
     $("footSource").textContent = src.foot;
     if (src.notes) $("notesList").innerHTML = src.notes().map(function (n) { return "<li>" + n + "</li>"; }).join("");
-    $("statusFilter").options[1].textContent = src.completeLabel;
+    $("statusFilter").options[1].textContent = val(src.completeLabel);
     if (cm && !$("sortBy").querySelector('option[value="recent"]')) {
       $("sortBy").insertAdjacentHTML("beforeend", '<option value="recent">เข้าใช้งานล่าสุด</option>');
     }

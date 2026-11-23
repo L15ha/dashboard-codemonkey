@@ -1,9 +1,10 @@
 # แดชบอร์ดโปรแกรม Code Monkey
 
-เว็บ static (HTML/CSS/JS) มี 2 หน้า สลับกันได้จากแถบเมนูด้านบน:
+เว็บ static (HTML/CSS/JS):
 
 - **ความคืบหน้าการเรียน** (`/progress/`) — หน้าแรก (`/` จะพาไปหน้านี้) สถิติ + รายชื่อผู้เรียนและ % ความคืบหน้า จาก LMS API ดูข้อ 5
-- **ประกาศผลผู้ได้รับสิทธิ์** (`/results/`) — ข้อมูลรายชื่อฝังในไฟล์ `results/assets/js/data.js`
+- **ประกาศผลผู้ได้รับสิทธิ์** (`/results/`) — **ปิดชั่วคราว** (รายชื่อเดิมไม่ถูกต้อง) ตอนนี้พาไปหน้าความคืบหน้า
+  หน้าเดิมอยู่ใน git history (ก่อน commit ที่ปิดหน้า) กู้คืนได้เมื่อได้รายชื่อที่ถูกต้อง
 
 ---
 
@@ -12,7 +13,7 @@
 ```
 Dashboard Codemonkey/
 ├─ index.html                 หน้าแรก → พาไป progress/
-├─ results/                   หน้าประกาศผล (index.html, assets/, vendor/)
+├─ results/index.html         หน้าประกาศผล (ปิดชั่วคราว → พาไป progress/)
 ├─ progress/                  หน้าความคืบหน้าการเรียน
 │  ├─ assets/js/app.js
 │  └─ data/sample.json        ข้อมูลสมมติ (ใช้ตอนรันในเครื่อง)
@@ -145,9 +146,9 @@ sudo bash deploy/install-progress-sync.sh     # จะถามหา API key
 
 ใช้ endpoint รายชื่อผู้เรียนของ CodeMonkey (`/api/v1/users.json`: uid, ชื่อ, วันที่สร้างบัญชี, เข้าใช้งานล่าสุด):
 
-- `deploy/sync-codemonkey.py` ดึงรายชื่อผู้เรียน แล้วดึง % ความคืบหน้า Coding Adventure ตอนที่ 1–3
+- `deploy/sync-codemonkey.py` ดึงรายชื่อผู้เรียน แล้วดึง % ความคืบหน้า Coding Adventure Part I–III
   (`GET /api/v1/users/{uid}/courses.json`) **เฉพาะคนที่เพิ่งเข้าใช้งาน** หรือไม่ได้อัปเดตเกิน 7 วัน ทุก 1 ชั่วโมง
-  (sync ครั้งแรกทั้งหมด ~1,500 คน ใช้เวลาประมาณ 6–7 นาที) — ตัวเลขหลัก = % ตอนที่ 1
+  (sync ครั้งแรกทั้งหมด ~1,500 คน ใช้เวลาประมาณ 6–7 นาที) — ตัวเลขหลัก = % Part I
 - เขียนไฟล์เดิม `/var/lib/codemonkey/progress.json` (`"source": "codemonkey"`) หน้าเว็บจะสลับรูปแบบให้เอง:
   คอลัมน์รายตอน, เข้าใช้งานล่าสุด, ซ่อนแถบ "ข้อมูลอยู่ระหว่างตรวจสอบ"
 - key อยู่ใน `/etc/codemonkey/api.env` ชื่อ `CM_CODEMONKEY_KEY` (root เท่านั้น)
