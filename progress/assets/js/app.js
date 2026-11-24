@@ -9,7 +9,9 @@
   var FALLBACK_URL = "data/sample.json";    // synthetic data for local preview
   var W = 0, P = 1, N = 2, S = 3, V = 4, PARTS = 5;  // row columns
 
-  var snap = null, cm = false, hasRoster = false;
+  var snap = null, cm = false, hasRoster = false, hasProvince = false;
+  var CATS = {};                   // school-column labels that are groups, not schools (from the sync)
+  var PROGRAM = "__program__";     // school filter value: every real school in the program
   var charts = {};
   var state = { from: "", q: "", status: "", prov: "", school: "", sort: "pct-desc", shown: [] };
 
@@ -42,7 +44,9 @@
           "<strong>ความคืบหน้า</strong> = เปอร์เซ็นต์ที่ทำได้ในแต่ละคอร์ส: " +
             snap.courses.map(function (c) { return esc(c.label); }).join(", ") + " · ตัวเลขหลักและสถานะ \"จบ\" ใช้ " + esc(snap.courses[0].label) + " ซึ่งผู้เรียนเกือบทั้งหมดกำลังเรียนอยู่",
           "<strong>เข้าใช้งานล่าสุด</strong> = ครั้งล่าสุดที่ผู้เรียนเข้าสู่ระบบ CodeMonkey",
-          hasRoster ? "ข้อมูลโรงเรียนและจังหวัดจับคู่จากรายชื่อนักเรียนของโครงการ" : ""
+          !hasRoster ? "" : (snap.school_categories || []).length
+            ? "<strong>โรงเรียน</strong> = จับคู่จากรายชื่อใน Google Sheet ของทีมโครงการ (อ่านใหม่ทุกครั้งที่อัปเดตข้อมูล) · ผู้เรียนที่สมัครหลังจากอัปเดตชีตจะแสดงว่า \"ยังไม่ได้จับคู่โรงเรียน\""
+            : "ข้อมูลโรงเรียนและจังหวัดจับคู่จากรายชื่อนักเรียนของโครงการ"
         ].filter(Boolean);
       }
     }
@@ -78,9 +82,17 @@
         return fetch(FALLBACK_URL, { cache: "no-store" }).then(function (r) { return r.json(); });
       });
   }
+  function inSchool(l) {
+    if (!state.school) return true;
+    if (state.school === PROGRAM) return !!l[S] && !CATS[l[S]];
+    return l[S] === state.school;
+  }
+  // Period, province and school filters apply to the whole page; search/status/sort only to the table.
   function rows() {
     var from = state.from;
-    return snap.learners.filter(function (l) { return !from || (l[W] || "") >= from; });
+    return snap.learners.filter(function (l) {
+      return (!from || (l[W] || "") >= from) && (!state.prov || l[V] === state.prov) && inSchool(l);
+    });
   }
 
   /* ---------- KPIs ---------- */
@@ -166,16 +178,26 @@
     return Object.keys(set).sort(function (a, b) { return a.localeCompare(b, "th"); });
   }
   function buildPlaceFilters() {
-    $("provinceFilter").hidden = $("schoolFilter").hidden = !hasRoster;
-    if (!hasRoster) return;
-    $("provinceFilter").innerHTML = options(uniqueSorted(snap.learners, V), "ทุกจังหวัด");
-    buildSchoolFilter();
+    $("schoolFilter").hidden = !hasRoster;
+    $("provinceFilter").hidden = !hasProvince;
+    if (hasProvince) $("provinceFilter").innerHTML = options(uniqueSorted(snap.learners, V), "ทุกจังหวัด");
+    if (hasRoster) buildSchoolFilter();
   }
   function buildSchoolFilter() {
-    var prov = state.prov;
-    var schools = uniqueSorted(snap.learners.filter(function (l) { return !prov || l[V] === prov; }), S);
-    if (schools.indexOf(state.school) === -1) state.school = "";
-    $("schoolFilter").innerHTML = options(schools, "ทุกโรงเรียน");
+    var prov = state.prov, count = {};
+    snap.learners.forEach(function (l) { if (l[S] && (!prov || l[V] === prov)) count[l[S]] = (count[l[S]] || 0) + 1; });
+    var bare = function (n) { return n.replace(/^(โรงเรียน|รร\.?)\s*/, ""); };  // the sheet mixes "โรงเรียน…", "รร.…" and bare names
+    var names = Object.keys(count).sort(function (a, b) { return bare(a).localeCompare(bare(b), "th"); });
+    var schools = names.filter(function (n) { return !CATS[n]; });
+    var groups = (snap.school_categories || []).filter(function (n) { return count[n]; });
+    var opt = function (v, label) { return '<option value="' + esc(v) + '">' + esc(label) + "</option>"; };
+    var total = schools.reduce(function (t, n) { return t + count[n]; }, 0);
+    var html = opt("", "ทุกโรงเรียน / ทุกกลุ่ม");
+    if (groups.length) html += opt(PROGRAM, "โรงเรียนในโครงการทั้งหมด (" + num(schools.length) + " โรงเรียน, " + num(total) + " คน)");
+    html += '<optgroup label="โรงเรียน">' + schools.map(function (n) { return opt(n, n + " (" + num(count[n]) + ")"); }).join("") + "</optgroup>";
+    if (groups.length) html += '<optgroup label="กลุ่มอื่น">' + groups.map(function (n) { return opt(n, n + " (" + num(count[n]) + ")"); }).join("") + "</optgroup>";
+    if (state.school && state.school !== PROGRAM && !count[state.school]) state.school = "";
+    $("schoolFilter").innerHTML = html;
     $("schoolFilter").value = state.school;
   }
 
@@ -201,7 +223,8 @@
   }
   function columns() {
     var cols = ['<th class="col-idx">ลำดับ</th>', "<th>ชื่อ - นามสกุล</th>"];
-    if (hasRoster) cols.push("<th>โรงเรียน</th>", "<th>จังหวัด</th>");
+    if (hasRoster) cols.push("<th>โรงเรียน</th>");
+    if (hasProvince) cols.push("<th>จังหวัด</th>");
     if (cm) snap.courses.forEach(function (c) { cols.push('<th class="part-cell">' + esc(c.label) + "</th>"); });
     else cols.push('<th class="col-progress">ความคืบหน้า</th>');
     cols.push("<th>สถานะ</th>");
@@ -213,17 +236,14 @@
     var shown = list.filter(function (l) {
       if (status === "done" && !isDone(l)) return false;
       if (status === "ongoing" && isDone(l)) return false;
-      if (state.prov && l[V] !== state.prov) return false;
-      if (state.school && l[S] !== state.school) return false;
       return !q || [l[N], l[S], l[V]].some(function (v) { return (v || "").toLowerCase().indexOf(q) !== -1; });
     }).sort(SORTS[state.sort]);
     state.shown = shown;
     var html = shown.map(function (l, i) {
       var cells = ['<td class="idx">' + (i + 1) + "</td>", '<td class="name">' + highlight(l[N] || "—", q) + "</td>"];
-      if (hasRoster) {
-        cells.push(l[S] ? "<td>" + highlight(l[S], q) + "</td>" : '<td class="muted">ไม่พบข้อมูล</td>');
-        cells.push("<td>" + highlight(l[V] || "", q) + "</td>");
-      }
+      if (hasRoster) cells.push(!l[S] ? '<td class="muted">ไม่พบข้อมูล</td>'
+        : CATS[l[S]] ? '<td class="muted">' + highlight(l[S], q) + "</td>" : "<td>" + highlight(l[S], q) + "</td>");
+      if (hasProvince) cells.push("<td>" + highlight(l[V] || "", q) + "</td>");
       if (cm) snap.courses.forEach(function (c, k) { var p = l[PARTS + k] || 0; cells.push('<td class="part-cell">' + bar(p, p >= 100, true) + "</td>"); });
       else cells.push("<td>" + bar(Math.min(l[P], 100), l[P] >= 100) + "</td>");
       cells.push("<td>" + (isDone(l) ? '<span class="pill full">' : '<span class="pill ongoing">') + esc(statusText(l)) + "</span></td>");
@@ -237,14 +257,16 @@
   /* ---------- export ---------- */
   function exportCSV() {
     var head = ["ลำดับ", "ชื่อ - นามสกุล"];
-    if (hasRoster) head.push("โรงเรียน", "จังหวัด");
+    if (hasRoster) head.push("โรงเรียน");
+    if (hasProvince) head.push("จังหวัด");
     if (cm) snap.courses.forEach(function (c) { head.push(c.label + " (%)"); });
     else head.push("ความคืบหน้า (%)");
     head.push("สถานะ");
     if (cm) head.push("เข้าใช้งานล่าสุด");
     var lines = [head].concat(state.shown.map(function (l, i) {
       var row = [i + 1, l[N]];
-      if (hasRoster) row.push(l[S], l[V]);
+      if (hasRoster) row.push(l[S]);
+      if (hasProvince) row.push(l[V]);
       if (cm) snap.courses.forEach(function (c, k) { row.push(l[PARTS + k] || 0); });
       else row.push(Math.min(l[P], 100));
       row.push(statusText(l));
@@ -289,7 +311,7 @@
     }
     if (hasRoster) {
       $("sortBy").insertAdjacentHTML("beforeend", '<option value="school">โรงเรียน ก → ฮ</option>');
-      $("searchBox").placeholder = "🔍 ค้นหาชื่อ นร. / โรงเรียน / จังหวัด…";
+      $("searchBox").placeholder = hasProvince ? "🔍 ค้นหาชื่อ นร. / โรงเรียน / จังหวัด…" : "🔍 ค้นหาชื่อ นร. / โรงเรียน…";
     }
     $("tableHead").innerHTML = columns().join("");
     buildPlaceFilters();
@@ -304,8 +326,8 @@
     render();
   });
   $("searchBox").addEventListener("input", function (e) { state.q = (e.target.value || "").trim().toLowerCase(); renderTable(rows()); });
-  $("provinceFilter").addEventListener("change", function (e) { state.prov = e.target.value; buildSchoolFilter(); renderTable(rows()); });
-  $("schoolFilter").addEventListener("change", function (e) { state.school = e.target.value; renderTable(rows()); });
+  $("provinceFilter").addEventListener("change", function (e) { state.prov = e.target.value; buildSchoolFilter(); render(); });
+  $("schoolFilter").addEventListener("change", function (e) { state.school = e.target.value; render(); });
   $("statusFilter").addEventListener("change", function (e) { state.status = e.target.value; renderTable(rows()); });
   $("sortBy").addEventListener("change", function (e) { state.sort = e.target.value; renderTable(rows()); });
   $("exportBtn").addEventListener("click", exportCSV);
@@ -313,7 +335,9 @@
   load().then(function (data) {
     snap = data;
     cm = data.source === "codemonkey";
-    hasRoster = cm && data.learners.some(function (l) { return l[S] || l[V]; });
+    hasRoster = cm && data.learners.some(function (l) { return l[S]; });
+    hasProvince = cm && data.learners.some(function (l) { return l[V]; });
+    (data.school_categories || []).forEach(function (c) { CATS[c] = true; });
     $("updatedAt").textContent = "อัปเดตล่าสุด " + parseDay(data.generated_at.slice(0, 10))
       .toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" }) + " " + data.generated_at.slice(11, 16) + " น.";
     if (data.lessons) $("lessonCount").textContent = data.lessons;

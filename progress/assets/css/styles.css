@@ -96,6 +96,7 @@ td.muted { color: var(--muted); white-space: nowrap; }
 
 .period-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
 .period-label { font-size: 13px; color: var(--muted); }
+.period-bar #schoolFilter { max-width: 420px; flex: 1 1 260px; }
 .seg { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 3px; gap: 2px; flex-wrap: wrap; }
 .seg button { border: 0; background: transparent; font-family: inherit; font-size: 13.5px; color: var(--ink); padding: 7px 14px; border-radius: 9px; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--brand); color: #fff; font-weight: 600; }

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/css/styles.css?v=6" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=7" />
 </head>
 <body>
   <header class="topbar">
@@ -17,7 +17,7 @@
         <div class="brand-mark">CM</div>
         <div>
           <h1>ความคืบหน้าการเรียน</h1>
-          <p class="subtitle">โปรแกรม Code Monkey — สถานะการเรียนคอร์สออนไลน์จากระบบ LMS</p>
+          <p class="subtitle">โปรแกรม Code Monkey — สถานะการเรียนคอร์สออนไลน์ Coding Adventure</p>
         </div>
       </div>
       <div class="topbar-actions">
@@ -41,6 +41,8 @@
         <button type="button" data-from="2026-01-01" aria-pressed="false">ในปี 2569</button>
         <button type="button" data-from="2026-09-07" aria-pressed="false">หลังประกาศผล (7 ก.ย. 69)</button>
       </div>
+      <select id="provinceFilter" class="input" hidden aria-label="จังหวัด"><option value="">ทุกจังหวัด</option></select>
+      <select id="schoolFilter" class="input" hidden aria-label="โรงเรียน"><option value="">ทุกโรงเรียน</option></select>
     </section>
 
     <!-- KPI cards -->
@@ -85,8 +87,6 @@
         <h2>รายชื่อผู้เรียนและความคืบหน้า</h2>
         <div class="table-controls">
           <input id="searchBox" class="input" type="search" placeholder="🔍 ค้นหาชื่อ-นามสกุล…" autocomplete="off" />
-          <select id="provinceFilter" class="input" hidden><option value="">ทุกจังหวัด</option></select>
-          <select id="schoolFilter" class="input" hidden><option value="">ทุกโรงเรียน</option></select>
           <select id="statusFilter" class="input">
             <option value="">ทุกสถานะ</option>
             <option value="done">เรียนจบแล้ว</option>
@@ -126,6 +126,6 @@
   </footer>
 
   <script src="../vendor/chart.umd.js"></script>
-  <script src="assets/js/app.js?v=8"></script>
+  <script src="assets/js/app.js?v=10"></script>
 </body>
 </html>

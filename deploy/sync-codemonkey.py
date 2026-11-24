@@ -9,8 +9,9 @@
 #    2. GET /api/v1/users/{uid}/courses.json only for learners who are new,
 #       signed in since the last fetch, or not refreshed for FULL_REFRESH_DAYS
 #       (per CodeMonkey's advice: most learners don't change between syncs).
-#    3. Join school/province from an optional roster CSV, drop hidden names,
-#       write the snapshot atomically.
+#    3. Join schools from the project's Google Sheet (re-read every run, so new
+#       mappings appear on the next sync) or an optional roster CSV, drop hidden
+#       names, write the snapshot atomically.
 #
 #  Run by the codemonkey-cm.timer systemd unit (see install-codemonkey-sync.sh).
 #
@@ -30,6 +31,10 @@
 #                       header row: school + province, and uid and/or name
 #                       (or firstname + lastname). uid matches are exact; name
 #                       matches ignore Thai/English titles and spacing.
+#    CM_SCHOOL_SHEET_ID / CM_SCHOOL_SHEET_GID  (optional) Google Sheet + tab that maps
+#                       CodeMonkey display names to schools; it must be viewable by link.
+#                       Only the two columns below are downloaded (never e-mails etc.).
+#    CM_SCHOOL_NAME_COL / CM_SCHOOL_COL  (optional) sheet columns, default D and J
 #    CM_FULL=1          (optional) refetch every learner this run
 # =============================================================================
 import csv
@@ -60,6 +65,17 @@ OUT_FILE = os.environ.get("CM_OUT_FILE", "/var/lib/codemonkey/progress.json")
 STATE_FILE = os.environ.get("CM_STATE_FILE", "/var/lib/codemonkey/cm-state.json")
 HIDDEN_FILE = os.environ.get("CM_HIDDEN_FILE", "/etc/codemonkey/hidden-names.txt")
 ROSTER_FILE = os.environ.get("CM_ROSTER_FILE", "/etc/codemonkey/roster.csv")
+SHEET_ID = os.environ.get("CM_SCHOOL_SHEET_ID", "").strip()
+SHEET_GID = os.environ.get("CM_SCHOOL_SHEET_GID", "0").strip()
+SHEET_NAME_COL = os.environ.get("CM_SCHOOL_NAME_COL", "D").strip()
+SHEET_SCHOOL_COL = os.environ.get("CM_SCHOOL_COL", "J").strip()
+SHEET_CACHE = os.path.join(os.path.dirname(STATE_FILE), "school-map.json")
+# Labels the project team uses in the sheet's school column besides real school names.
+PRE_PROGRAM = "ผู้ใช้สิทธิ์ในปี 2023-2025 ก่อนเริ่มโครงการ"   # accounts created before the program (2026)
+NOT_FOUND = "ไม่พบชื่อโรงเรียน/บุคคลนอกโครงการ"
+TEAM = "ทีมงานโครงการ"
+PENDING = "ยังไม่ได้จับคู่โรงเรียน"                     # ours: signed up after the sheet was last updated
+PROGRAM_START = "2026-01-01"
 FULL_REFRESH_DAYS = 7
 WORKERS = 4
 MAX_FAILED_SHARE = 0.2  # keep the previous snapshot if more progress calls fail than this...
@@ -194,6 +210,43 @@ def load_roster(path):
     return by_uid, by_name
 
 
+def sheet_column(col, last_row):
+    url = "https://docs.google.com/spreadsheets/d/%s/export?format=csv&gid=%s&range=%s1:%s%d" % (
+        urllib.parse.quote(SHEET_ID), urllib.parse.quote(SHEET_GID), col, col, last_row)
+    with urllib.request.urlopen(url, timeout=60) as resp:
+        if "text/csv" not in resp.headers.get("Content-Type", ""):
+            raise ValueError("sheet is not viewable by link (got %s)" % resp.headers.get("Content-Type"))
+        return [(r[0] if r else "") for r in csv.reader(resp.read().decode("utf-8").splitlines())]
+
+
+def load_sheet_map():
+    """-> {display name: [school labels]} from the project sheet; falls back to the last good copy."""
+    if not SHEET_ID:
+        return {}
+    try:
+        names = sheet_column(SHEET_NAME_COL, 100000)  # trailing empty rows are trimmed by Google
+        schools = sheet_column(SHEET_SCHOOL_COL, len(names))  # the school column has ~50k formula rows: stop at the last name
+        mapping = {}
+        for name, school in list(zip(names, schools))[1:]:  # row 1 = headers
+            name, school = norm_name(name), norm_name(school)
+            if name and school and school not in mapping.setdefault(name, []):
+                mapping[name].append(school)
+        write_atomic(SHEET_CACHE, mapping)
+        return mapping
+    except Exception as e:
+        print("warning: school sheet not read (%s) - using last good copy" % e)
+        return load_json(SHEET_CACHE, {})
+
+
+def school_for(user, labels):
+    """Pick one label; a name can map to several when people share it - the creation date tells them apart."""
+    early = bool(user["created"]) and user["created"] < PROGRAM_START
+    if labels:
+        same_era = [l for l in labels if (l == PRE_PROGRAM) == early]
+        return (same_era or labels)[0]
+    return PRE_PROGRAM if early else PENDING
+
+
 def write_atomic(path, obj):
     folder = os.path.dirname(path) or "."
     fd, tmp = tempfile.mkstemp(dir=folder, prefix=".cm-", suffix=".json")
@@ -244,6 +297,7 @@ def main():
 
     hidden, hidden_hits = load_hidden(HIDDEN_FILE), set()
     by_uid, by_name = load_roster(ROSTER_FILE)
+    sheet = load_sheet_map()
     learners, matched = [], 0
     for u in users:
         if u["name"] in hidden:
@@ -251,8 +305,13 @@ def main():
             continue
         prog = (state.get(u["uid"]) or {}).get("progress", {})
         parts = [min(int(prog.get(c, 0)), 100) for c in COURSES]
-        school, province = by_uid.get(u["uid"]) or by_name.get(match_key(u["name"])) or ("", "")
-        matched += bool(school or province)
+        if u["uid"] in by_uid:
+            school, province = by_uid[u["uid"]]
+        elif sheet:
+            school, province = school_for(u, sheet.get(u["name"])), ""
+        else:
+            school, province = by_name.get(match_key(u["name"])) or ("", "")
+        matched += bool(school or province) and school != PENDING
         main = parts[0] if parts else 0
         learners.append([u["last"], main, u["name"], school, province] + parts)
     learners.sort(key=lambda l: l[2])
@@ -267,6 +326,8 @@ def main():
         "hidden": len(hidden_hits),
         "roster_matched": matched,
         "created_from": CREATED_FROM,
+        # school labels that are categories, not schools (the page lists them apart)
+        "school_categories": [TEAM, PRE_PROGRAM, NOT_FOUND, PENDING] if sheet else [],
         "courses": [{"key": c, "label": COURSE_LABELS.get(c, (c, c))[0], "short": COURSE_LABELS.get(c, (c, c))[1]} for c in COURSES],
         # [last_sign_in "YYYY-MM-DD HH:MM", main % (first course), name, school, province, <% per course in "courses">]
         "learners": learners,
