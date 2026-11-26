@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  Switches the /progress/ data source from the LMS API to CodeMonkey's API
-#  (codemonkey-cm.timer, every minute). Both jobs write the same snapshot file, so the
+#  (codemonkey-cm.timer, every 5 minutes). Both jobs write the same snapshot file, so the
 #  LMS timer is stopped here.
 #
 #  Usage (run on the EC2 host, after install-progress-sync.sh):
@@ -71,11 +71,11 @@ UNIT
 
 cat > /etc/systemd/system/codemonkey-cm.timer <<'UNIT'
 [Unit]
-Description=Sync Code Monkey course progress from CodeMonkey every minute
+Description=Sync Code Monkey course progress from CodeMonkey every 5 minutes
 
 [Timer]
-OnBootSec=1min
-OnUnitActiveSec=1min
+OnBootSec=2min
+OnUnitActiveSec=5min
 AccuracySec=1s
 Persistent=true
 
