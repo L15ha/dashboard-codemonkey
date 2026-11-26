@@ -40,7 +40,7 @@
       foot: "ข้อมูลจาก CodeMonkey",
       notes: function () {
         return [
-          "ข้อมูลจากระบบ CodeMonkey โดยตรง อัปเดตอัตโนมัติทุกชั่วโมง",
+          "ข้อมูลจากระบบ CodeMonkey โดยตรง ดึงข้อมูลใหม่อัตโนมัติทุก 5 นาที และหน้านี้อัปเดตตัวเองโดยไม่ต้องกด refresh",
           "<strong>ความคืบหน้า</strong> = เปอร์เซ็นต์ที่ทำได้ในแต่ละคอร์ส: " +
             snap.courses.map(function (c) { return esc(c.label); }).join(", ") + " · ตัวเลขหลักและสถานะ \"จบ\" ใช้ " + esc(snap.courses[0].label) + " ซึ่งผู้เรียนเกือบทั้งหมดกำลังเรียนอยู่",
           "<strong>เข้าใช้งานล่าสุด</strong> = ครั้งล่าสุดที่ผู้เรียนเข้าสู่ระบบ CodeMonkey",
@@ -373,17 +373,43 @@
   $("sortBy").addEventListener("change", function (e) { state.sort = e.target.value; renderTable(rows()); });
   $("exportBtn").addEventListener("click", exportCSV);
 
+  function showUpdated(data) {
+    $("updatedAt").textContent = "อัปเดตล่าสุด " + parseDay(data.generated_at.slice(0, 10))
+      .toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" }) + " " + data.generated_at.slice(11, 16) + " น.";
+  }
+
+  // The server re-syncs every few minutes; pick up a new snapshot without a page reload,
+  // keeping the viewer's filters, search and sort.
+  var POLL_MS = 60000;
+  function refresh() {
+    if (document.hidden) return;
+    fetch(DATA_URL, { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (data) {
+        if (!data || !data.learners || data.generated_at === snap.generated_at || (data.source === "codemonkey") !== cm) return;
+        snap = data;
+        (data.school_categories || []).forEach(function (c) { CATS[c] = true; });
+        showUpdated(data);
+        if (hasRoster) buildSchoolFilter();
+        render();
+      })
+      .catch(function () { /* keep showing the last snapshot; try again next time */ });
+  }
+
   load().then(function (data) {
     snap = data;
     cm = data.source === "codemonkey";
     hasRoster = cm && data.learners.some(function (l) { return l[S]; });
     hasProvince = cm && data.learners.some(function (l) { return l[V]; });
     (data.school_categories || []).forEach(function (c) { CATS[c] = true; });
-    $("updatedAt").textContent = "อัปเดตล่าสุด " + parseDay(data.generated_at.slice(0, 10))
-      .toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" }) + " " + data.generated_at.slice(11, 16) + " น.";
+    showUpdated(data);
     if (data.lessons) $("lessonCount").textContent = data.lessons;
     applySource();
     render();
+    if ($("sampleNotice").hidden) {
+      setInterval(refresh, POLL_MS);
+      document.addEventListener("visibilitychange", refresh);
+    }
   }).catch(function () {
     $("updatedAt").textContent = "โหลดข้อมูลไม่สำเร็จ";
   });

@@ -7,7 +7,8 @@
 #  Flow:
 #    1. GET the program's learner list (uid, display name, last sign-in).
 #    2. GET /api/v1/users/{uid}/courses.json only for learners who are new,
-#       signed in since the last fetch, or not refreshed for FULL_REFRESH_DAYS
+#       signed in since the last fetch or within ACTIVE_HOURS (may still be
+#       playing), or not refreshed for FULL_REFRESH_DAYS
 #       (per CodeMonkey's advice: most learners don't change between syncs).
 #    3. Join schools from the project's Google Sheet (re-read every run, so new
 #       mappings appear on the next sync) or an optional roster CSV, drop hidden
@@ -36,6 +37,7 @@
 #                       Only the two columns below are downloaded (never e-mails etc.).
 #    CM_SCHOOL_NAME_COL / CM_SCHOOL_COL  (optional) sheet columns, default D and J
 #    CM_LICENSE_TOTAL   (optional) licenses in the program, shown as "x / total" (default 5000)
+#    CM_ACTIVE_HOURS    (optional) refetch learners who signed in this many hours ago or less, every run (default 2, 0 = off)
 #    CM_FULL=1          (optional) refetch every learner this run
 # =============================================================================
 import csv
@@ -78,6 +80,9 @@ TEAM = "ทีมงานโครงการ"
 PENDING = "ยังไม่ได้จับคู่โรงเรียน"                     # ours: signed up after the sheet was last updated
 PROGRAM_START = "2026-01-01"
 FULL_REFRESH_DAYS = 7
+# Sign-in time only changes once per session, so learners who signed in recently may still be
+# playing: refetch them every run so their progress shows up while they learn.
+ACTIVE_HOURS = float(os.environ.get("CM_ACTIVE_HOURS", "2") or 0)
 WORKERS = 4
 MAX_FAILED_SHARE = 0.2  # keep the previous snapshot if more progress calls fail than this...
 MIN_FAILED = 5          # ...and at least this many (one broken learner must not block every update)
@@ -262,6 +267,8 @@ def needs_fetch(user, prev, now, full):
     if full or not prev or "progress" not in prev:
         return True
     if user["last"] and user["last"] != prev.get("last"):
+        return True
+    if ACTIVE_HOURS and user["last"] and user["last"] >= (now - timedelta(hours=ACTIVE_HOURS)).strftime("%Y-%m-%d %H:%M"):
         return True
     fetched = prev.get("fetched", "")
     return not fetched or fetched < (now - timedelta(days=FULL_REFRESH_DAYS)).strftime("%Y-%m-%d %H:%M")
