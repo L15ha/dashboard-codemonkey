@@ -20,3 +20,6 @@ Thumbs.db
 
 # Live LMS snapshot (generated on the server, never committed)
 progress/data/progress.json
+
+# Data exports with learner names (personal data) - never commit
+exports/
