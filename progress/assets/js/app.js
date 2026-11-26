@@ -125,10 +125,12 @@
       card("", "จำนวนผู้ลงทะเบียน", num(n), whole ? ' <span class="kpi-of">/ ' + num(lic) + "</span>" : "",
         whole ? '<div class="bar sm kpi-bar"><span style="width:' + Math.min(n / lic * 100, 100) + '%"></span></div>' + pct(n / lic * 100) + " ของจำนวนที่ลงทะเบียนได้"
               : "จากทั้งหมด " + num(snap.learners.length) + " คน (ตามตัวกรอง)") +
-      card("ok", "ใช้งาน License แล้ว", num(used), "", share(used) + " · เริ่มเรียนแล้ว (ความคืบหน้ามากกว่า 0%)") +
+      card("ok", "ใช้งาน License แล้ว", num(used), "", share(used) + " · เริ่มเรียนแล้ว (ความคืบหน้ามากกว่า 0%)" +
+        '<ul class="kpi-split">' + [["กำลังเรียน (ยังไม่จบ " + esc(mainShort()) + ")", c.active],
+          ["จบ " + esc(mainShort()) + " แล้ว", c.p1], ["จบครบ " + snap.courses.length + " Part", c.all]].map(function (r) {
+          return "<li><span>" + r[0] + "</span><b>" + num(r[1]) + "</b></li>"; }).join("") + "</ul>") +
       card("warn", "ยังไม่ใช้งาน License", num(c.unused), "", share(c.unused) + " · ความคืบหน้า 0% ทุก Part") +
-      card("accent", "เรียนสำเร็จแล้ว", num(c.all), "", "จบครบ " + snap.courses.length + " Part ของ Coding Adventure" +
-        (c.p1 ? " · อีก " + num(c.p1) + " คนจบ " + esc(mainShort()) + " แล้ว" : ""));
+      card("accent", "เรียนสำเร็จแล้ว", num(c.all), "", share(c.all) + " · จบครบ " + snap.courses.length + " Part ของ Coding Adventure");
   }
   function renderKPIs(list) {
     if (cm) return renderCmKPIs(list);
