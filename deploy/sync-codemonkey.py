@@ -36,6 +36,7 @@
 #                       CodeMonkey display names to schools; it must be viewable by link.
 #                       Only the two columns below are downloaded (never e-mails etc.).
 #    CM_SCHOOL_NAME_COL / CM_SCHOOL_COL  (optional) sheet columns, default D and J
+#    CM_SHEET_EVERY_MIN (optional) re-read the sheet at most every N minutes (default 5)
 #    CM_LICENSE_TOTAL   (optional) licenses in the program, shown as "x / total" (default 5000)
 #    CM_ACTIVE_HOURS    (optional) refetch learners who signed in this many hours ago or less, every run (default 2, 0 = off)
 #    CM_FULL=1          (optional) refetch every learner this run
@@ -73,6 +74,7 @@ SHEET_GID = os.environ.get("CM_SCHOOL_SHEET_GID", "0").strip()
 SHEET_NAME_COL = os.environ.get("CM_SCHOOL_NAME_COL", "D").strip()
 SHEET_SCHOOL_COL = os.environ.get("CM_SCHOOL_COL", "J").strip()
 SHEET_CACHE = os.path.join(os.path.dirname(STATE_FILE), "school-map.json")
+SHEET_EVERY_MIN = float(os.environ.get("CM_SHEET_EVERY_MIN", "5") or 0)
 # Labels the project team uses in the sheet's school column besides real school names.
 PRE_PROGRAM = "ผู้ใช้สิทธิ์ในปี 2023-2025 ก่อนเริ่มโครงการ"   # accounts created before the program (2026)
 NOT_FOUND = "ไม่พบชื่อโรงเรียน/บุคคลนอกโครงการ"
@@ -160,10 +162,35 @@ def parse_time(v):
         return ""
 
 
-def fetch_users(key):
-    users, url = [], BASE + USERS_PATH
+def page_url(url, page):
+    parts = urllib.parse.urlsplit(url)
+    q = dict(urllib.parse.parse_qsl(parts.query))
+    q["page"] = str(page)
+    return urllib.parse.urlunsplit(parts._replace(query=urllib.parse.urlencode(q)))
+
+
+def user_pages(key):
+    """Yield each page of the learner list. With page/total_pages the pages are fetched in
+    parallel (the list is ~16 pages and the sync runs every minute); otherwise follow links."""
+    url = BASE + USERS_PATH
+    first = get_json(url, key)
+    yield first
+    pages = first.get("total_pages") if isinstance(first, dict) else None
+    if isinstance(pages, int) and first.get("page") == 1 and not (first.get("next") or first.get("next_page_url")):
+        with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+            for payload in pool.map(lambda p: get_json(page_url(url, p), key), range(2, pages + 1)):
+                yield payload
+        return
+    url = next_url(first, url)
     while url:
         payload = get_json(url, key)
+        yield payload
+        url = next_url(payload, url)
+
+
+def fetch_users(key):
+    users = []
+    for payload in user_pages(key):
         for u in results_of(payload):
             uid = u.get("uid", u.get("id"))
             if uid in (None, ""):
@@ -171,8 +198,8 @@ def fetch_users(key):
             last = next((u[k] for k in ("latest_sign_in_at", "last_sign_in_at", "last_sign_in", "last_login_at") if k in u), None)
             users.append({"uid": str(uid), "name": norm_name(u.get("display_name") or u.get("name")),
                           "last": parse_time(last), "created": parse_time(u.get("created_at"))})
-        url = next_url(payload, url)
-    return users
+    # A sign-up between page requests can shift an account onto the next page: count each uid once.
+    return list({u["uid"]: u for u in reversed(users)}.values())[::-1]
 
 
 def fetch_progress(key, uid):
@@ -229,6 +256,11 @@ def load_sheet_map():
     """-> {display name: [school labels]} from the project sheet; falls back to the last good copy."""
     if not SHEET_ID:
         return {}
+    try:  # the sync runs every minute; the team edits the sheet by hand, so re-read it every few minutes
+        if time.time() - os.path.getmtime(SHEET_CACHE) < SHEET_EVERY_MIN * 60:
+            return load_json(SHEET_CACHE, {})
+    except OSError:
+        pass
     try:
         names = sheet_column(SHEET_NAME_COL, 100000)  # trailing empty rows are trimmed by Google
         schools = sheet_column(SHEET_SCHOOL_COL, len(names))  # the school column has ~50k formula rows: stop at the last name

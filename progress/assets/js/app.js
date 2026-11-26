@@ -40,7 +40,7 @@
       foot: "ข้อมูลจาก CodeMonkey",
       notes: function () {
         return [
-          "ข้อมูลจากระบบ CodeMonkey โดยตรง ดึงข้อมูลใหม่อัตโนมัติทุก 5 นาที และหน้านี้อัปเดตตัวเองโดยไม่ต้องกด refresh",
+          "ข้อมูลจากระบบ CodeMonkey โดยตรง ดึงข้อมูลใหม่อัตโนมัติทุก 1 นาที และหน้านี้อัปเดตตัวเองโดยไม่ต้องกด refresh",
           "<strong>ความคืบหน้า</strong> = เปอร์เซ็นต์ที่ทำได้ในแต่ละคอร์ส: " +
             snap.courses.map(function (c) { return esc(c.label); }).join(", ") + " · ตัวเลขหลักและสถานะ \"จบ\" ใช้ " + esc(snap.courses[0].label) + " ซึ่งผู้เรียนเกือบทั้งหมดกำลังเรียนอยู่",
           "<strong>เข้าใช้งานล่าสุด</strong> = ครั้งล่าสุดที่ผู้เรียนเข้าสู่ระบบ CodeMonkey",
@@ -380,7 +380,7 @@
 
   // The server re-syncs every few minutes; pick up a new snapshot without a page reload,
   // keeping the viewer's filters, search and sort.
-  var POLL_MS = 60000;
+  var POLL_MS = 15000;
   function refresh() {
     if (document.hidden) return;
     fetch(DATA_URL, { cache: "no-store" })
