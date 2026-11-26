@@ -35,6 +35,7 @@
 #                       CodeMonkey display names to schools; it must be viewable by link.
 #                       Only the two columns below are downloaded (never e-mails etc.).
 #    CM_SCHOOL_NAME_COL / CM_SCHOOL_COL  (optional) sheet columns, default D and J
+#    CM_LICENSE_TOTAL   (optional) licenses in the program, shown as "x / total" (default 5000)
 #    CM_FULL=1          (optional) refetch every learner this run
 # =============================================================================
 import csv
@@ -325,6 +326,7 @@ def main():
         "total": len(learners),
         "hidden": len(hidden_hits),
         "roster_matched": matched,
+        "license_total": int(os.environ.get("CM_LICENSE_TOTAL", "5000")),
         "created_from": CREATED_FROM,
         # school labels that are categories, not schools (the page lists them apart)
         "school_categories": [TEAM, PRE_PROGRAM, NOT_FOUND, PENDING] if sheet else [],

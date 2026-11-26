@@ -75,6 +75,9 @@ td.empty { text-align: center; color: var(--muted); padding: 28px; }
 .pill.partial { background: #fef3c7; color: #92400e; }
 .table-foot { padding: 12px 4px 6px; font-size: 13px; color: var(--muted); }
 .pill.ongoing { background: #dbeafe; color: #1e40af; }
+.pill.idle { background: #fef3c7; color: #92400e; }
+.kpi-of { font-size: 18px; font-weight: 600; color: var(--muted); }
+.kpi-bar { margin: 6px 0 6px; max-width: 220px; }
 .col-progress { min-width: 220px; }
 .progress-cell { display: flex; align-items: center; gap: 10px; }
 .bar { flex: 1; height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; min-width: 120px; }
