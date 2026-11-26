@@ -67,8 +67,8 @@
   }
   // LMS: finished = 100% of the videos. CodeMonkey: finished part 1 (where almost all learners are).
   function isDone(l) { return cm ? l[PARTS] >= 100 : l[P] >= 100; }
-  // CodeMonkey stages, same rules as the DCC Portal cards: unused = 0% everywhere, active = started but
-  // Part I not finished ("ใช้งาน License แล้ว"), p1 = Part I finished, all = every part finished ("เรียนสำเร็จ").
+  // CodeMonkey stages: unused = 0% everywhere, active = started but Part I not finished, p1 = Part I
+  // finished, all = every part finished ("เรียนสำเร็จ"). "ใช้งาน License แล้ว" = active + p1 + all.
   function stage(l) {
     var parts = snap.courses.map(function (c, k) { return l[PARTS + k] || 0; });
     if (parts.every(function (p) { return p >= 100; })) return "all";
@@ -117,13 +117,15 @@
   function renderCmKPIs(list) {
     var n = list.length, c = { unused: 0, active: 0, p1: 0, all: 0 };
     list.forEach(function (l) { c[stage(l)]++; });
+    // used + unused = registered: everyone who started counts as using a license, finished or not.
+    var used = c.active + c.p1 + c.all;
     var share = function (k) { return n ? pct(k / n * 100) + " ของผู้ลงทะเบียน" : "—"; };
     var lic = snap.license_total || 5000, whole = list.length === snap.learners.length;
     $("kpiGrid").innerHTML =
       card("", "จำนวนผู้ลงทะเบียน", num(n), whole ? ' <span class="kpi-of">/ ' + num(lic) + "</span>" : "",
         whole ? '<div class="bar sm kpi-bar"><span style="width:' + Math.min(n / lic * 100, 100) + '%"></span></div>' + pct(n / lic * 100) + " ของจำนวนที่ลงทะเบียนได้"
               : "จากทั้งหมด " + num(snap.learners.length) + " คน (ตามตัวกรอง)") +
-      card("ok", "ใช้งาน License แล้ว", num(c.active), "", share(c.active) + " · เริ่มเรียนแล้ว ยังไม่จบ " + esc(mainShort())) +
+      card("ok", "ใช้งาน License แล้ว", num(used), "", share(used) + " · เริ่มเรียนแล้ว (ความคืบหน้ามากกว่า 0%)") +
       card("warn", "ยังไม่ใช้งาน License", num(c.unused), "", share(c.unused) + " · ความคืบหน้า 0% ทุก Part") +
       card("accent", "เรียนสำเร็จแล้ว", num(c.all), "", "จบครบ " + snap.courses.length + " Part ของ Coding Adventure" +
         (c.p1 ? " · อีก " + num(c.p1) + " คนจบ " + esc(mainShort()) + " แล้ว" : ""));
@@ -267,7 +269,7 @@
   function renderTable(list) {
     var q = state.q, status = state.status;
     var shown = list.filter(function (l) {
-      if (cm && status && stage(l) !== status) return false;
+      if (cm && status && (status === "used" ? stage(l) === "unused" : stage(l) !== status)) return false;
       if (!cm && status === "done" && !isDone(l)) return false;
       if (!cm && status === "ongoing" && isDone(l)) return false;
       return !q || [l[N], l[S], l[V]].some(function (v) { return (v || "").toLowerCase().indexOf(q) !== -1; });
@@ -339,7 +341,7 @@
     $("kpiOngoingFoot").textContent = val(src.ongoingFoot);
     $("footSource").textContent = src.foot;
     if (src.notes) $("notesList").innerHTML = src.notes().map(function (n) { return "<li>" + n + "</li>"; }).join("");
-    if (cm) $("statusFilter").innerHTML = [["", "ทุกสถานะ"], ["active", "ใช้งาน License แล้ว (กำลังเรียน)"], ["unused", "ยังไม่ใช้งาน License"],
+    if (cm) $("statusFilter").innerHTML = [["", "ทุกสถานะ"], ["used", "ใช้งาน License แล้ว (ทั้งหมด)"], ["active", "กำลังเรียน (ยังไม่จบ " + mainShort() + ")"], ["unused", "ยังไม่ใช้งาน License"],
       ["p1", "จบ " + mainShort() + " แล้ว (ยังไม่ครบทุก Part)"], ["all", "เรียนสำเร็จ (ครบทุก Part)"]].map(function (o) {
         return '<option value="' + o[0] + '">' + esc(o[1]) + "</option>"; }).join("");
     else $("statusFilter").options[1].textContent = val(src.completeLabel);
